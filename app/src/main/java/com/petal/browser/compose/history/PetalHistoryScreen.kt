@@ -328,6 +328,10 @@ fun PetalHistoryScreen(
                                     )
                                 }
                             }
+
+                            item(key = "history_supportive_ad") {
+                                com.petal.browser.ads.PetalSupportiveAdBanner()
+                            }
                         }
                     }
                 }

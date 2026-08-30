@@ -525,6 +525,12 @@ fun PetalDownloadManagerScreen(
                             )
                         }
                     }
+
+                    item(key = "downloads_supportive_ad") {
+                        com.petal.browser.ads.PetalSupportiveAdBanner(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
         }
