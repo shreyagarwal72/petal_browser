@@ -2633,7 +2633,7 @@ fun PetalSettingsScreen(
 
                                     Spacer(Modifier.height(4.dp))
 
-                                    SettingToggleRow(
+                                    ToggleRow(
                                         title = "Enable Supportive Ads",
                                         subtitle = if (isSupportiveAdsOn) "Active • Showing supportive ad banner on home screen" else "Disabled • Completely ad-free browsing experience",
                                         icon = Icons.Rounded.Favorite,
