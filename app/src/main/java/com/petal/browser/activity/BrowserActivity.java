@@ -584,6 +584,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        }
+
         // Chrome-style Tab Session Restoration & Rehydration
         try {
             java.util.List<com.petal.browser.unit.TabSessionManager.TabStateRecord> savedSession =
@@ -1618,16 +1622,19 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 }
 
                 boolean isAddressBarVisible = addressBar.getVisibility() != GONE;
+                contentParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                contentParams.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                contentParams.removeRule(RelativeLayout.ABOVE);
+                contentParams.removeRule(RelativeLayout.BELOW);
+
                 if (isAddressBarVisible) {
-                    contentParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
-                    contentParams.removeRule(RelativeLayout.ABOVE);
                     contentParams.addRule(RelativeLayout.BELOW, R.id.compose_address_bar);
                 } else {
-                    contentParams.removeRule(RelativeLayout.BELOW);
-                    contentParams.removeRule(RelativeLayout.ABOVE);
                     contentParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                 }
                 contentParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                contentParams.topMargin = 0;
+                contentParams.bottomMargin = 0;
 
                 if (downloadBanner != null && downloadBanner.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
                     RelativeLayout.LayoutParams bannerParams = (RelativeLayout.LayoutParams) downloadBanner.getLayoutParams();
@@ -1645,7 +1652,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     bubbleParams.bottomMargin = 0;
                     fabBubble.setLayoutParams(bubbleParams);
                 }
-            }
 
                 if (bottomNavContainer != null && bottomNavContainer.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
                     RelativeLayout.LayoutParams containerParams = (RelativeLayout.LayoutParams) bottomNavContainer.getLayoutParams();
@@ -1666,7 +1672,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     bottomNav.bringToFront();
                 }
 
-                boolean hasNav = bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE;
                 mainContent.setPadding(0, 0, 0, 0);
 
                 addressBar.setLayoutParams(addrParams);
@@ -1676,17 +1681,17 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 addressBar.bringToFront();
                 addressBar.requestLayout();
                 mainContent.requestLayout();
+            }
 
-                if (progressBarCompose != null) {
-                    progressBarCompose.bringToFront();
-                    progressBarCompose.requestLayout();
-                }
+            if (progressBarCompose != null) {
+                progressBarCompose.bringToFront();
+                progressBarCompose.requestLayout();
+            }
 
-                View refreshBarComposeView = findViewById(R.id.refresh_bar_compose);
-                if (refreshBarComposeView != null) {
-                    refreshBarComposeView.bringToFront();
-                    refreshBarComposeView.requestLayout();
-                }
+            View refreshBarComposeView = findViewById(R.id.refresh_bar_compose);
+            if (refreshBarComposeView != null) {
+                refreshBarComposeView.bringToFront();
+                refreshBarComposeView.requestLayout();
             }
         } catch (Exception e) {
             Log.e(TAG, "Error applying address bar position", e);
