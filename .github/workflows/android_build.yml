@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Android App Bundle & APK
     runs-on: ubuntu-latest
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+UseG1GC -Dorg.gradle.daemon=false"
@@ -40,10 +40,10 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+      - name: Build Release APK and Android App Bundle (AAB)
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
 
-      - name: Sign & ZipAlign Release APKs
+      - name: Sign & ZipAlign Release Artifacts (AAB & APK)
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           ALIAS: ${{ secrets.ALIAS }}
@@ -94,11 +94,33 @@ jobs:
             fi
           done
 
-      - name: Upload Release APK Artifact
+          mkdir -p signed_bundle
+          for aab in app/build/outputs/bundle/release/*.aab; do
+            if [ -f "$aab" ]; then
+              filename=$(basename "$aab")
+              final_aab="signed_bundle/$filename"
+              cp "$aab" "$final_aab"
+              jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+                -keystore app/release.keystore \
+                -storepass "$STORE_PASS" \
+                -keypass "$KEY_PASS" \
+                "$final_aab" "$ALIAS_NAME"
+              jarsigner -verify -verbose -certs "$final_aab"
+            fi
+          done
+
+      - name: Upload Release APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: petal-browser-release
+          name: petal-browser-release-apk
           path: signed_apks/*.apk
+          retention-days: 30
+
+      - name: Upload Play Store App Bundle Artifact (.aab)
+        uses: actions/upload-artifact@v4
+        with:
+          name: petal-browser-playstore-aab
+          path: signed_bundle/*.aab
           retention-days: 30
 
   release:
@@ -130,16 +152,22 @@ jobs:
             echo "CHANGELOG=Release v$VERSION" >> $GITHUB_ENV
           fi
 
-      - name: Download Release APK Artifact
+      - name: Download Release APK Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: petal-browser-release
+          name: petal-browser-release-apk
           path: apks/release
 
-      - name: Prepare Release APK Files
+      - name: Download Play Store App Bundle Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: petal-browser-playstore-aab
+          path: aab/release
+
+      - name: Prepare Release Files
         run: |
           mkdir -p dist
-          find apks/release -type f
+          find apks/release aab/release -type f
 
           for f in apks/release/*.apk; do
             if [[ "$f" == *"arm64-v8a"* ]]; then
@@ -152,6 +180,11 @@ jobs:
               cp "$f" dist/$(basename "$f")
             fi
           done
+
+          for f in aab/release/*.aab; do
+            cp "$f" dist/petal-browser-playstore-release.aab
+          done
+
           ls -la dist/
 
       - name: Create or Update GitHub Release
@@ -166,12 +199,13 @@ jobs:
 
             ---
 
-            ### Direct APK Downloads:
-            - **`petal-browser-arm64-v8a-release.apk`**: 64-bit ARM architecture (Recommended for modern smartphones)
-            - **`petal-browser-armeabi-v7a-release.apk`**: 32-bit ARM architecture (For older devices)
+            ### Play Store Publishing & Direct Downloads:
+            - **`petal-browser-playstore-release.aab`**: Signed Android App Bundle (Recommended format for Google Play Console upload)
+            - **`petal-browser-arm64-v8a-release.apk`**: 64-bit ARM architecture
+            - **`petal-browser-armeabi-v7a-release.apk`**: 32-bit ARM architecture
             - **`petal-browser-universal-release.apk`**: Universal build containing all ABIs
           files: |
-            dist/*.apk
+            dist/*
           generate_release_notes: true
           make_latest: true
           draft: false
