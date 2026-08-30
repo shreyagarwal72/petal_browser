@@ -598,6 +598,9 @@ fun PetalHomeScreen(
                                     onAddShortcutClick = { isAddingNewShortcut = true }
                                 )
 
+                                // ── Supportive Ads Banner (Only renders when enabled in Settings -> Ads) ──
+                                com.petal.browser.ads.PetalSupportiveAdBanner()
+
                                 Spacer(Modifier.height(96.dp))
                             }
                         }

@@ -194,6 +194,7 @@ enum class SettingsCategory(val title: String, val subtitle: String, val icon: I
     PRIVACY("Privacy & Security", "AdBlock, HTTPS-only, Private DNS & cookies", Icons.Rounded.Shield),
     SEARCH_HOMEPAGE("Search Engine & Home", "Default search engine and custom homepage", Icons.Rounded.Search),
     DISPLAY_ZOOM("Accessibility", "Touch haptics, text font scaling and page zoom preview", Icons.Rounded.Accessibility),
+    ADS("Ads & Support", "Supportive native and banner ads configuration", Icons.Rounded.Campaign),
     DATA_STORAGE("Data & Backup", "Backup and restore history, bookmarks & settings", Icons.Rounded.Backup),
     ABOUT("About & Developer", "App version, licenses, GitHub & developer", Icons.Rounded.Info)
 }
@@ -597,6 +598,7 @@ fun PetalSettingsScreen(
                                     SettingsCategory.PRIVACY,
                                     SettingsCategory.SEARCH_HOMEPAGE,
                                     SettingsCategory.DISPLAY_ZOOM,
+                                    SettingsCategory.ADS,
                                     SettingsCategory.DATA_STORAGE,
                                     SettingsCategory.ABOUT
                                 )
@@ -2612,6 +2614,62 @@ fun PetalSettingsScreen(
                             }
 
 
+
+                            // 8. Ads & Support Configuration Section
+                            if ((scaffoldCategory == SettingsCategory.ADS || searchQuery.isNotBlank()) && matchesSearch("Ads & Support", "supportive ads google admob banner monetization sponsor donate contribute revenue development")) {
+                                var isSupportiveAdsOn by remember {
+                                    mutableStateOf(sp.getBoolean(com.petal.browser.ads.PetalSupportiveAdsManager.KEY_SUPPORTIVE_ADS_ENABLED, false))
+                                }
+
+                                SettingsCategoryCard(title = "Supportive Ads", icon = Icons.Rounded.Campaign) {
+                                    Text(
+                                        "Support Petal Browser development by optionally enabling non-intrusive, supportive ads on the home screen. Ads are 100% optional and only display when this toggle is explicitly turned ON.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Spacer(Modifier.height(4.dp))
+
+                                    SettingToggleRow(
+                                        title = "Enable Supportive Ads",
+                                        subtitle = if (isSupportiveAdsOn) "Active • Showing supportive ad banner on home screen" else "Disabled • Completely ad-free browsing experience",
+                                        icon = Icons.Rounded.Favorite,
+                                        checked = isSupportiveAdsOn,
+                                        onCheckedChange = { newValue ->
+                                            isSupportiveAdsOn = newValue
+                                            com.petal.browser.ads.PetalSupportiveAdsManager.setSupportiveAdsEnabled(context, newValue)
+                                        }
+                                    )
+
+                                    if (isSupportiveAdsOn) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(16.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Rounded.ThumbUp,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(
+                                                    text = "Thank you for supporting Petal Browser! Your support helps us maintain server infrastructure and rapid open-source development.",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             // 9. About & Developer Profile Section
                             if ((scaffoldCategory == SettingsCategory.ABOUT || searchQuery.isNotBlank()) && matchesSearch("About", "app developer profile version shrey agarwal github licenses terms open source")) {
