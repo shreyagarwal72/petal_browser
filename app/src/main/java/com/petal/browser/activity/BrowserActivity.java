@@ -584,6 +584,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        }
+
         // Chrome-style Tab Session Restoration & Rehydration
         try {
             java.util.List<com.petal.browser.unit.TabSessionManager.TabStateRecord> savedSession =
@@ -1451,7 +1455,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     albumSavedUrl = ninjaWebView.getAlbumUrl();
                 } catch (Exception ignored) {}
 
-                String targetUrl = (overrideUrl != null && !overrideUrl.isEmpty()) ? overrideUrl : albumSavedUrl;
+                String targetUrl = (overrideUrl != null && !overrideUrl.isEmpty()) ? overrideUrl : (currentUrl != null && !currentUrl.isEmpty() ? currentUrl : albumSavedUrl);
 
                 if ((currentUrl == null || currentUrl.isEmpty() || "about:blank".equalsIgnoreCase(currentUrl)) &&
                     (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl) && !"about:blank".equalsIgnoreCase(targetUrl))) {
