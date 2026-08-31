@@ -76,7 +76,7 @@
         <!-- Google AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-5680314597533936~2825634534" />
+            android:value="@string/admob_app_id" />
 
         <!-- AppLocales Metadata Holder Service for AppCompat auto-store locales -->
         <service
