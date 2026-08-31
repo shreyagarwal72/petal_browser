@@ -56,11 +56,6 @@ object PetalUpdateSheetBridge {
     private val executor = Executors.newSingleThreadExecutor()
 
     @JvmStatic
-    fun checkForUpdates(activity: ComponentActivity, isLaunchCheck: Boolean) {
-        com.petal.browser.unit.UpdateUnit.checkForUpdates(activity, isLaunchCheck)
-    }
-
-    @JvmStatic
     fun showChangelogHistorySheet(activity: ComponentActivity) {
         executor.execute {
             var releases: List<PetalUpdateInfo>? = null
