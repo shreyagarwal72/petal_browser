@@ -25,7 +25,10 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import androidx.annotation.NonNull;
 import androidx.webkit.WebViewFeature;
@@ -36,6 +39,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Objects;
 
 import com.petal.browser.R;
@@ -54,6 +60,16 @@ public class NinjaWebViewClient extends WebViewClient {
     private final SharedPreferences sp;
     private final AdBlock adBlock;
     private volatile String currentUrl = "";
+
+    // Extensions WebView would otherwise render inline as text instead of downloading, since
+    // they typically aren't served with a Content-Disposition: attachment header. Kept to
+    // source/code/data-file types a user would expect a "Download" prompt for, not markup the
+    // browser is meant to display (html, htm, css, and images/media are intentionally excluded).
+    private static final Set<String> FORCE_DOWNLOAD_EXTENSIONS = new HashSet<>(java.util.Arrays.asList(
+            "kt", "kts", "java", "py", "c", "h", "cpp", "cc", "hpp", "cs", "go", "rb", "php",
+            "rs", "swift", "ts", "tsx", "jsx", "sh", "bash", "yml", "yaml", "json", "xml", "csv",
+            "md", "gradle", "properties", "toml", "ini", "log", "sql", "txt"
+    ));
 
     public NinjaWebViewClient(NinjaWebView ninjaWebView) {
         super();
@@ -581,6 +597,15 @@ public class NinjaWebViewClient extends WebViewClient {
             }
         }
 
+        // WebView only fires NinjaDownloadListener.onDownloadStart for content types it can't
+        // render itself. Plain-text/source responses (.kt, .java, .py, .json, ...) almost never
+        // arrive with a Content-Disposition: attachment header, so WebView just navigates and
+        // displays them inline - the download confirmation dialog never gets a chance to show at
+        // all, regardless of any fix to that listener. The actual force-download decision (with a
+        // verified Content-Type, not just a URL-extension guess) happens in shouldInterceptRequest
+        // below; shouldForceDownloadForUrl() here is reused only as a cheap pre-filter there, so
+        // this method just lets matching URLs fall through to the network layer as normal.
+
         if (url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:") || url.startsWith("about:")) {
             return false;
         } else {
@@ -591,6 +616,141 @@ public class NinjaWebViewClient extends WebViewClient {
             } catch (Exception ignored) {}
             return true;
         }
+    }
+
+    private boolean shouldForceDownloadForUrl(Uri uri) {
+        String lastSegment = uri.getLastPathSegment();
+        if (lastSegment == null) return false;
+        int dot = lastSegment.lastIndexOf('.');
+        if (dot < 0 || dot == lastSegment.length() - 1) return false;
+        String ext = lastSegment.substring(dot + 1).toLowerCase(Locale.US);
+        return FORCE_DOWNLOAD_EXTENSIONS.contains(ext);
+    }
+
+    // Content-Types WebView should still be allowed to render inline even when the URL's
+    // extension is in FORCE_DOWNLOAD_EXTENSIONS - guards against same-origin SPA/dynamic routes
+    // that merely end in e.g. ".json" or ".py" but actually serve an HTML page.
+    private static final Set<String> RENDERABLE_CONTENT_TYPES = new HashSet<>(java.util.Arrays.asList(
+            "text/html", "application/xhtml+xml", "text/css",
+            "application/javascript", "text/javascript", "application/x-javascript"
+    ));
+
+    private boolean isRenderableContentType(String contentType) {
+        return contentType != null && RENDERABLE_CONTENT_TYPES.contains(contentType);
+    }
+
+    /**
+     * Issues a lightweight HEAD (falling back to a ranged GET if the server rejects HEAD) to read
+     * the server's real Content-Type before deciding to force a download - runs on the background
+     * thread WebView already uses for shouldInterceptRequest, so blocking here is safe.
+     * Returns the Content-Type (charset stripped, lowercased) or null if the probe fails.
+     */
+    private String probeContentType(String url, java.util.Map<String, String> requestHeaders) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setInstanceFollowRedirects(true);
+            connection.setConnectTimeout(4000);
+            connection.setReadTimeout(4000);
+            connection.setRequestMethod("HEAD");
+            applyProbeHeaders(connection, url, requestHeaders);
+
+            int code = connection.getResponseCode();
+            if (code == HttpURLConnection.HTTP_BAD_METHOD || code == 501) {
+                connection.disconnect();
+                connection = (HttpURLConnection) new URL(url).openConnection();
+                connection.setInstanceFollowRedirects(true);
+                connection.setConnectTimeout(4000);
+                connection.setReadTimeout(4000);
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Range", "bytes=0-0");
+                applyProbeHeaders(connection, url, requestHeaders);
+                code = connection.getResponseCode();
+            }
+
+            if (code >= 200 && code < 400) {
+                String contentType = connection.getContentType();
+                if (contentType != null && !contentType.trim().isEmpty()) {
+                    return contentType.split(";")[0].trim().toLowerCase(Locale.US);
+                }
+            }
+        } catch (IOException ignored) {
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+        return null;
+    }
+
+    private void applyProbeHeaders(HttpURLConnection connection, String url, java.util.Map<String, String> requestHeaders) {
+        String cookie = CookieManager.getInstance().getCookie(url);
+        if (cookie != null && !cookie.isEmpty()) {
+            connection.setRequestProperty("Cookie", cookie);
+        }
+        if (requestHeaders != null) {
+            for (java.util.Map.Entry<String, String> header : requestHeaders.entrySet()) {
+                if (!"Range".equalsIgnoreCase(header.getKey())) {
+                    connection.setRequestProperty(header.getKey(), header.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Skips straight to the same AlertDialog-based confirmation used for real downloads
+     * (see PetalDownloadDialogBridge.showDownloadConfirmation); mimeType here is the server's
+     * verified Content-Type from probeContentType() when available, falling back to an
+     * extension guess only if the probe failed. BrowserUnit.download() (Fetch2) resolves the
+     * real size itself once the user confirms, so an unknown size here just shows the dialog
+     * without a "(X MB)" suffix.
+     */
+    private void triggerDownloadConfirmationForUrl(String url, String verifiedContentType) {
+        String mimeType = verifiedContentType;
+        if (mimeType == null || mimeType.isEmpty()) {
+            mimeType = android.webkit.MimeTypeMap.getSingleton()
+                    .getMimeTypeFromExtension(android.webkit.MimeTypeMap.getFileExtensionFromUrl(url));
+        }
+        if (mimeType == null) mimeType = "text/plain";
+        final String finalMimeType = mimeType;
+        com.petal.browser.ui.components.PetalDownloadDialogBridge.showDownloadConfirmation(
+                context,
+                url,
+                null,
+                finalMimeType,
+                0L,
+                confirmedFileName -> {
+                    BrowserUnit.download(context, url, confirmedFileName, finalMimeType);
+                    return kotlin.Unit.INSTANCE;
+                }
+        );
+    }
+
+    /**
+     * Force-download probe used from shouldInterceptRequest(): for a main-frame GET whose URL
+     * extension is in FORCE_DOWNLOAD_EXTENSIONS, verifies the server's real Content-Type before
+     * triggering the download confirmation, so an empty 204-style response is returned only when
+     * the probe confirms this isn't actually renderable HTML/CSS/JS (e.g. an SPA route that just
+     * happens to end in ".json"). Returns null when the request should load normally.
+     */
+    private WebResourceResponse maybeInterceptForForceDownload(WebView view, WebResourceRequest request) {
+        if (request == null || request.getUrl() == null || !request.isForMainFrame()
+                || !"GET".equalsIgnoreCase(request.getMethod())) {
+            return null;
+        }
+        final Uri uri = request.getUrl();
+        final String url = uri.toString();
+        if (!(url.startsWith("http:") || url.startsWith("https:")) || !shouldForceDownloadForUrl(uri)) {
+            return null;
+        }
+        String verifiedContentType = probeContentType(url, request.getRequestHeaders());
+        if (verifiedContentType != null && !isRenderableContentType(verifiedContentType)) {
+            final String finalContentType = verifiedContentType;
+            view.post(() -> triggerDownloadConfirmationForUrl(url, finalContentType));
+            return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
+        }
+        // Probe failed (network/timeout) or content is actually renderable (e.g. an SPA
+        // route ending in ".json" that really serves HTML) - fall through and let WebView
+        // load it normally rather than risk a false-positive download prompt.
+        return null;
     }
 
     private boolean handleCustomScheme(WebView view, String url) {
@@ -770,6 +930,10 @@ public class NinjaWebViewClient extends WebViewClient {
 
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        WebResourceResponse forcedDownloadResponse = maybeInterceptForForceDownload(view, request);
+        if (forcedDownloadResponse != null) {
+            return forcedDownloadResponse;
+        }
         if (request != null && !request.isForMainFrame() && ninjaWebView.isAdBlock()) {
             PetalAdBlockEngine.ensureInitialized(context);
             String reqUrl = request.getUrl().toString();
