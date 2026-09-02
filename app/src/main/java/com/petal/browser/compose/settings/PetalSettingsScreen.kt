@@ -821,39 +821,7 @@ fun PetalSettingsScreen(
 
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                                    // Open AI Hub Button Card
-                                    Surface(
-                                        onClick = {
-                                            if (context is androidx.activity.ComponentActivity) {
-                                                com.petal.browser.compose.ai.PetalAiHubBridge.showAiHub(context)
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(14.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    "Open Petal AI Hub Directory",
-                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                                )
-                                                Text(
-                                                    "Launch Petal AI tools, Deep Web Research, and web AI tools catalog",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
-                                                )
-                                            }
-                                            Icon(Icons.Rounded.SmartToy, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                                        }
-                                    }
 
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                                     var enableLiveSuggestions by remember { mutableStateOf(sp.getBoolean("sp_enable_live_suggestions", true)) }
                                     ToggleRow(

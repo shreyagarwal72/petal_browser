@@ -22,7 +22,7 @@ public class Settings_Activity extends AppCompatActivity {
     /**
      * Optional String extra naming a {@link SettingsCategory} enum constant (e.g.
      * "API_INTEGRATIONS"). When present, Settings opens straight to that category's
-     * page instead of the root category list - so a caller like the Petal AI Hub's
+     * page instead of the root category list - so a caller like the Petal Settings
      * "Configure Keys" action lands the user on the actual page they asked for, not
      * a list they then have to tap through themselves.
      */
