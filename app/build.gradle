@@ -153,4 +153,8 @@ dependencies {
 
     // Google Mobile Ads (AdMob)
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
+
+    // ── Mozilla GeckoView — Gecko rendering engine ──────────────────────────
+    // omni variant bundles all locales. Pin to a stable Firefox 150 build.
+    implementation 'org.mozilla.geckoview:geckoview-omni:150.0.20260511200624'
 }
