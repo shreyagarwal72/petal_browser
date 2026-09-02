@@ -208,51 +208,53 @@ private fun SettingsCategoryCard(
     iconRes: Int? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-        tonalElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+    // RvSystem-Monitor style: bold primary section label above the card,
+    // flat Card with surfaceVariant 70% alpha, 24dp corners, 0dp elevation.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // ── Section label (primary, bold, with inline icon) ───────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(bottom = 10.dp, start = 6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (iconRes != null) {
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(iconRes),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else if (icon != null) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
+            if (iconRes != null) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp)
                 )
             }
-            content()
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        // ── Flat card body ────────────────────────────────────────────────
+        androidx.compose.material3.Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            ),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                content()
+            }
         }
     }
 }
@@ -285,7 +287,7 @@ private fun ToggleRow(
 ) {
     val contentAlpha = if (enabled) 1f else 0.38f
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -295,7 +297,7 @@ private fun ToggleRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -345,7 +347,7 @@ private fun PetalVariableSlider(
     onValueChange: (Float) -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -485,6 +487,8 @@ fun PetalSettingsScreen(
     var searchEngineIndex by remember { mutableStateOf(sp.getString("sp_search_engine", "0") ?: "0") }
     var torrentEngineMode by remember { mutableStateOf(sp.getString("sp_torrent_engine", "1DM") ?: "1DM") }
     var showEngineSheet by remember { mutableStateOf(false) }
+    var isGeckoEngineEnabled by remember { mutableStateOf(sp.getBoolean(com.petal.browser.gecko.PREF_GECKO_ENGINE_ENABLED, false)) }
+    var showGeckoRestartBanner by remember { mutableStateOf(false) }
 
     DisposableEffect(sp) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -820,8 +824,6 @@ fun PetalSettingsScreen(
                                     }
 
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-
 
                                     var enableLiveSuggestions by remember { mutableStateOf(sp.getBoolean("sp_enable_live_suggestions", true)) }
                                     ToggleRow(
@@ -1717,6 +1719,146 @@ fun PetalSettingsScreen(
                                 }
                             }
 
+                            // ── Gecko Engine (Experimental) ───────────────────────────────────────
+                            if ((scaffoldCategory == SettingsCategory.EXPERIMENTAL || searchQuery.isNotBlank()) && matchesSearch("Gecko Engine", "gecko mozilla firefox geckoview rendering engine experimental webextension")) {
+                                SettingsCategoryCard(title = "Gecko Engine (Experimental)", iconRes = com.petal.browser.R.drawable.build_filled) {
+
+                                    // Info banner
+                                    Surface(
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Info,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.size(18.dp).padding(top = 1.dp)
+                                            )
+                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                Text(
+                                                    "Mozilla Gecko (Firefox 150)",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                                Text(
+                                                    "Replaces Android WebView with Mozilla's Gecko rendering engine. Enables real WebExtension APIs (uBlock, Tampermonkey). Adds ~100 MB to APK and ~120 MB RAM overhead. Restart required to take effect.",
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                                                )
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    "⚠ Supported: arm64-v8a · x86_64 only",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Main toggle
+                                    ToggleRow(
+                                        title = "Enable Gecko Rendering Engine",
+                                        subtitle = "Use Mozilla's Firefox engine instead of Chrome/WebView. Enables WebExtension API support.",
+                                        icon = Icons.Rounded.Language,
+                                        checked = isGeckoEngineEnabled,
+                                        onCheckedChange = { newValue ->
+                                            isGeckoEngineEnabled = newValue
+                                            if (newValue) {
+                                                com.petal.browser.gecko.GeckoRuntimeHolder.enable(context)
+                                            } else {
+                                                com.petal.browser.gecko.GeckoRuntimeHolder.disable(context)
+                                            }
+                                            showGeckoRestartBanner = true
+                                        }
+                                    )
+
+                                    // Restart required banner — shown after toggle change
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = showGeckoRestartBanner,
+                                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.Warning,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Text(
+                                                        "Restart Petal to apply changes",
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                                    )
+                                                }
+                                                TextButton(
+                                                    onClick = {
+                                                        // Restart the app cleanly
+                                                        val pm = context.packageManager
+                                                        val intent = pm.getLaunchIntentForPackage(context.packageName)
+                                                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                                        context.startActivity(intent)
+                                                        android.os.Process.killProcess(android.os.Process.myPid())
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        "Restart now",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Engine status chip
+                                    val isLive = com.petal.browser.gecko.GeckoRuntimeHolder.isInitialized
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isLive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                if (isLive) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                                contentDescription = null,
+                                                tint = if (isLive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = if (isLive) "Gecko Engine is active (Firefox 150 · geckoview-omni:150.0.20260511200624)" else "Gecko Engine is inactive — using system WebView",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                color = if (isLive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             // 5. Default Search Engine Section
                             if ((scaffoldCategory == SettingsCategory.SEARCH_HOMEPAGE || searchQuery.isNotBlank()) && matchesSearch("Search Engine", "google duckduckgo bing brave startpage ecosia search provider")) {
                                 SettingsCategoryCard(title = "Default Search Engine", iconRes = com.petal.browser.R.drawable.globe_2_cancel_rounded) {
@@ -2452,6 +2594,22 @@ fun PetalSettingsScreen(
                                 }
                             }
 
+                            val exportBookmarksHtmlLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/html")
+                            ) { uri: android.net.Uri? ->
+                                if (uri != null) {
+                                    com.petal.browser.unit.BookmarkHtmlImporterExporter.exportToUri(context, uri)
+                                }
+                            }
+
+                            val importBookmarksHtmlLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+                            ) { uri: android.net.Uri? ->
+                                if (uri != null) {
+                                    com.petal.browser.unit.BookmarkHtmlImporterExporter.importFromUri(context, uri)
+                                }
+                            }
+
                             if (showBackupDialog) {
                                 AlertDialog(
                                     onDismissRequest = { showBackupDialog = false },
@@ -2587,7 +2745,7 @@ fun PetalSettingsScreen(
                                             ) {
                                                 Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Backup to JSON", maxLines = 1)
+                                                Text("Backup JSON", maxLines = 1)
                                             }
                                         }
 
@@ -2601,7 +2759,53 @@ fun PetalSettingsScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.Center
                                             ) {
-                                                Text("Restore from JSON", maxLines = 1)
+                                                Text("Restore JSON", maxLines = 1)
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                    Text(
+                                        "HTML Bookmarks (Standard Netscape Format — Chrome, Firefox, Safari):",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { exportBookmarksHtmlLauncher.launch("bookmarks.html") },
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(Icons.Rounded.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Export HTML", maxLines = 1)
+                                            }
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { importBookmarksHtmlLauncher.launch(arrayOf("text/html", "text/plain", "*/*")) },
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(Icons.Rounded.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Import HTML", maxLines = 1)
                                             }
                                         }
                                     }
