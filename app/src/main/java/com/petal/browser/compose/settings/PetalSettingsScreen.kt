@@ -2296,7 +2296,7 @@ fun PetalSettingsScreen(
                             }
 
                             // 8. Miscellaneous Settings Category
-                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "external apps open youtube maps apps launch")) {
+                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "external apps open youtube maps apps launch crash report diagnostics logs zip")) {
                                 SettingsCategoryCard(title = "External Applications & Links", iconRes = com.petal.browser.R.drawable.download_2_filled) {
                                     ToggleRow(
                                         title = "Auto Open External Apps",
@@ -2308,6 +2308,57 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_auto_open_apps", newValue).apply()
                                         }
                                     )
+                                }
+
+                                SettingsCategoryCard(title = "Crash Reporting & Diagnostics", icon = Icons.Rounded.BugReport) {
+                                    var crashMode by remember {
+                                        mutableStateOf(sp.getString(com.petal.browser.logger.PetalAppLogger.PREF_CRASH_REPORT_MODE, "auto") ?: "auto")
+                                    }
+                                    com.petal.browser.ui.components.PetalCrashReportingPicker(
+                                        selectedMode = crashMode,
+                                        onModeSelected = { mode ->
+                                            crashMode = mode
+                                            sp.edit().putString(com.petal.browser.logger.PetalAppLogger.PREF_CRASH_REPORT_MODE, mode).apply()
+                                            com.petal.browser.view.NinjaToast.show(context, if (mode == "auto") "Crash reporting set to Auto" else "Crash reporting disabled")
+                                        }
+                                    )
+
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.6f)
+                                                com.petal.browser.logger.PetalAppLogger.shareLogsZip(context)
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Icon(Icons.Rounded.FolderZip, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Export Logs")
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.VIRTUAL_KEY, 0.8f)
+                                                com.petal.browser.logger.PetalAppLogger.simulateCrash()
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                                contentColor = MaterialTheme.colorScheme.onError
+                                            )
+                                        ) {
+                                            Icon(Icons.Rounded.WarningAmber, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Simulate Crash")
+                                        }
+                                    }
                                 }
                             }
 
