@@ -1,3 +1,14 @@
+### v2.6.1 (Hotfix)
+
+- **🔄 Multi-Architecture Release Builds**:
+  - GitHub Actions and Gradle now build and release individual APKs for `arm64-v8a`, `armeabi-v7a`, `x86_64`, and `x86`, alongside the universal APK and Play Store App Bundle (`.aab`).
+
+### v2.6.0 (Official Release)
+
+- **🚀 Complete Removal of Gecko Engine & Extensions**:
+  - Completely stripped out Mozilla GeckoView (`geckoview-omni:150`) and all associated runtime holders, sessions, installer, and UI settings.
+  - APK size drastically reduced (~100 MB lighter) with lower idle memory footprint.
+
 ### v2.5.1 (Hotfix)
 
 - **🐛 Predictive Back Shutter Eliminated — App Lock & About Developer Screens**:

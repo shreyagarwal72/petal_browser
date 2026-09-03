@@ -174,6 +174,10 @@ jobs:
               cp "$f" dist/petal-browser-arm64-v8a-release.apk
             elif [[ "$f" == *"armeabi-v7a"* ]]; then
               cp "$f" dist/petal-browser-armeabi-v7a-release.apk
+            elif [[ "$f" == *"x86_64"* ]]; then
+              cp "$f" dist/petal-browser-x86_64-release.apk
+            elif [[ "$f" == *"x86"* ]]; then
+              cp "$f" dist/petal-browser-x86-release.apk
             elif [[ "$f" == *"universal"* ]]; then
               cp "$f" dist/petal-browser-universal-release.apk
             else
@@ -201,9 +205,11 @@ jobs:
 
             ### Play Store Publishing & Direct Downloads:
             - **`petal-browser-playstore-release.aab`**: Signed Android App Bundle (Recommended format for Google Play Console upload)
-            - **`petal-browser-arm64-v8a-release.apk`**: 64-bit ARM architecture
-            - **`petal-browser-armeabi-v7a-release.apk`**: 32-bit ARM architecture
-            - **`petal-browser-universal-release.apk`**: Universal build containing all ABIs
+            - **`petal-browser-universal-release.apk`**: Universal build containing all ABIs (Recommended for all devices)
+            - **`petal-browser-arm64-v8a-release.apk`**: 64-bit ARM architecture (Recommended for modern smartphones)
+            - **`petal-browser-armeabi-v7a-release.apk`**: 32-bit ARM architecture (For older devices)
+            - **`petal-browser-x86_64-release.apk`**: 64-bit x86 architecture (For emulators & Chromebooks)
+            - **`petal-browser-x86-release.apk`**: 32-bit x86 architecture (For older emulators)
           files: |
             dist/*
           generate_release_notes: true
