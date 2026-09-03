@@ -26,8 +26,8 @@ android {
         applicationId "com.petal.browser"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 261
-        versionName "2.6.1"
+        versionCode 262
+        versionName "2.6.2"
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
     }
@@ -153,4 +153,7 @@ dependencies {
 
     // Google Mobile Ads (AdMob)
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
+
+    // Guava for high-performance domain suffix resolution
+    implementation 'com.google.guava:guava:33.2.1-android'
 }

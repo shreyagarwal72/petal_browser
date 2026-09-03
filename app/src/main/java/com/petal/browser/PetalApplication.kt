@@ -15,11 +15,13 @@ import com.petal.browser.predictive.PetalPredictiveJunction
 import com.petal.browser.unit.BrowserUnit
 import com.petal.browser.unit.TabThumbnailCache
 import com.petal.browser.widget.PetalSearchWidgetProvider
+import dagger.hilt.android.HiltAndroidApp
 
 /**
  * Custom Application class for Petal Browser written in Kotlin.
  * Initializes ChromiumNativeEngineCore and predictive junctions during early app process launch.
  */
+@HiltAndroidApp
 class PetalApplication : Application() {
 
     private var lastNightModeBits: Int = 0
@@ -37,9 +39,11 @@ class PetalApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         try {
             com.petal.browser.logger.PetalAppLogger.init(this)
             ChromiumNativeEngineCore.initialize(this)
+            com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(this)
             PetalPredictiveJunction.init(
                 PreferenceManager.getDefaultSharedPreferences(this)
             )
@@ -100,5 +104,8 @@ class PetalApplication : Application() {
 
     companion object {
         private const val TAG = "PetalApplication"
+        @JvmStatic
+        var instance: PetalApplication? = null
+            private set
     }
 }
