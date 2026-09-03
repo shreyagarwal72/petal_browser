@@ -194,7 +194,7 @@ enum class SettingsCategory(val title: String, val subtitle: String, val iconRes
     PRIVACY("Privacy & Security", "AdBlock, HTTPS-only, Private DNS & cookies", com.petal.browser.R.drawable.layers_filled),
     SEARCH_HOMEPAGE("Search Engine & Home", "Default search engine and custom homepage", com.petal.browser.R.drawable.home_filled),
     DISPLAY_ZOOM("Accessibility", "Touch haptics, text font scaling and page zoom preview", com.petal.browser.R.drawable.mobile_vibrate_filled),
-    EXPERIMENTAL("Experimental", "App language, experimental features and advanced settings", com.petal.browser.R.drawable.build_filled),
+    EXPERIMENTAL("Experimental", "App language, intro animations, experimental features and advanced settings", com.petal.browser.R.drawable.build_filled),
     MISCELLANEOUS("Miscellaneous", "Download engine, external apps handling and extra browser tools", com.petal.browser.R.drawable.download_2_filled),
     DATA_STORAGE("Data & Backup", "Backup and restore history, bookmarks & settings", com.petal.browser.R.drawable.backup_filled),
     UPDATER("App Updates", "Check for updates and auto-check on launch", com.petal.browser.R.drawable.update_rounded),
@@ -478,6 +478,7 @@ fun PetalSettingsScreen(
     var showPasscodeDialog by remember { mutableStateOf(false) }
     var isDoubleBackExit by remember { mutableStateOf(sp.getBoolean("sp_double_back_exit", true)) }
     var addressBarPosition by remember { mutableStateOf(sp.getString("sp_address_bar_position", "TOP") ?: "TOP") }
+    var introAnimationStyle by remember { mutableStateOf(sp.getString("sp_intro_animation_style", "NONE") ?: "NONE") }
     var fontSize by remember { mutableFloatStateOf(sp.getFloat("sp_font_size_scale", 1.0f)) }
     var zoomLevel by remember { mutableFloatStateOf(sp.getFloat("sp_zoom_level_scale", 1.0f)) }
     var isForceZoom by remember { mutableStateOf(sp.getBoolean("sp_force_enable_zoom", true)) }
@@ -1585,7 +1586,7 @@ fun PetalSettingsScreen(
                             }
 
                             // 4. Popular Languages Selector (Under Experimental Category)
-                            if ((scaffoldCategory == SettingsCategory.EXPERIMENTAL || searchQuery.isNotBlank()) && matchesSearch("Language", "languages popular english hinglish spanish hindi french german chinese arabic portuguese russian japanese experimental address bar top bottom position")) {
+                            if ((scaffoldCategory == SettingsCategory.EXPERIMENTAL || searchQuery.isNotBlank()) && matchesSearch("Language", "languages popular english hinglish spanish hindi french german chinese arabic portuguese russian japanese experimental address bar top bottom position intro animation cold start prism beam bloom petal")) {
                                 SettingsCategoryCard(title = "App Language", iconRes = com.petal.browser.R.drawable.translate) {
                                     Text(
                                         "Choose your preferred display language:",
@@ -1680,6 +1681,48 @@ fun PetalSettingsScreen(
                                                     { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                                                 } else null
                                             )
+                                        }
+                                    }
+                                }
+
+                                SettingsCategoryCard(title = "Cold-Start Intro Animation (Experimental)", icon = Icons.Rounded.Animation) {
+                                    Text(
+                                        "Select the 3D cinematic opening animation when launching Petal from a cold start:",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    val introOptions = listOf(
+                                        Triple("NONE", "Off (Default)", "Instant home screen with zero delay"),
+                                        Triple("PRISM_BEAM", "3D Prism & Optical Beam", "Refractive 3D glass prism struck by laser with chromatic spectral waves"),
+                                        Triple("BLOOMING_PETAL", "The Blooming Petal", "Fluid organic blossom unfolding into 5 glassmorphic petals with ripples")
+                                    )
+
+                                    val introScrollState = rememberScrollState()
+                                    com.petal.browser.ui.components.ScrollFadeRow(
+                                        scrollState = introScrollState,
+                                        edgeColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(introScrollState),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            introOptions.forEach { (key, label, _) ->
+                                                FilterChip(
+                                                    selected = introAnimationStyle == key,
+                                                    onClick = {
+                                                        introAnimationStyle = key
+                                                        sp.edit().putString("sp_intro_animation_style", key).apply()
+                                                        com.petal.browser.ui.components.PetalIntroAnimationTracker.reset()
+                                                    },
+                                                    label = { Text(label) },
+                                                    leadingIcon = if (introAnimationStyle == key) {
+                                                        { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                                    } else null
+                                                )
+                                            }
                                         }
                                     }
                                 }
