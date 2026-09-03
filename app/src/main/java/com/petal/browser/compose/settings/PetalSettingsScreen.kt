@@ -189,7 +189,7 @@ object PetalSettingsBridge {
 
 enum class SettingsCategory(val title: String, val subtitle: String, val iconRes: Int) {
     OVERVIEW("Settings", "Browse all settings categories", com.petal.browser.R.drawable.settings_filled),
-    API_INTEGRATIONS("API & Integrations Hub", "AndroidX WebKit, Google Credential Manager & Palette APIs", com.petal.browser.R.drawable.ic_rust_logo),
+    API_INTEGRATIONS("API & Integrations Hub", "AndroidX WebKit, Google Credential Manager & Palette APIs", com.petal.browser.R.drawable.ic_ai_stars),
     APPEARANCE("Appearance & Theme", "Fonts, theme modes, color palettes, AMOLED & Material You", com.petal.browser.R.drawable.brightness_medium_filled),
     PRIVACY("Privacy & Security", "AdBlock, HTTPS-only, Private DNS & cookies", com.petal.browser.R.drawable.layers_filled),
     SEARCH_HOMEPAGE("Search Engine & Home", "Default search engine and custom homepage", com.petal.browser.R.drawable.home_filled),
@@ -645,7 +645,7 @@ fun PetalSettingsScreen(
 
                             // 0. Dedicated Petal AI & API Keys Hub Sub-Screen Page
                             if ((scaffoldCategory == SettingsCategory.API_INTEGRATIONS || searchQuery.isNotBlank()) && matchesSearch("API & Integrations", "petal ai api key gemini openrouter openai grok groq key deep research webkit search suggestions")) {
-                                SettingsCategoryCard(title = "Petal AI & API Keys Hub", iconRes = com.petal.browser.R.drawable.ic_rust_logo) {
+                                SettingsCategoryCard(title = "Petal AI & API Keys Hub", iconRes = com.petal.browser.R.drawable.ic_ai_stars) {
                                     Text(
                                         "Configure AI providers, API keys, and model selections for Petal Deep Research, AI Search, and page summarizer.",
                                         style = MaterialTheme.typography.bodySmall,
