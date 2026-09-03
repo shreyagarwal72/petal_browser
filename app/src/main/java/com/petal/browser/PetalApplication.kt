@@ -44,10 +44,9 @@ class PetalApplication : Application() {
                 PreferenceManager.getDefaultSharedPreferences(this)
             )
             TabThumbnailCache.initDiskCache(this)
-            com.petal.browser.ads.PetalSupportiveAdsManager.initialize(this)
-            Log.i(TAG, "Early Chromium Native Engine & Predictive Junction initialization complete")
+            Log.i(TAG, "Early engine initialization complete")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed early Chromium Native Engine init", e)
+            Log.e(TAG, "Failed early engine init", e)
         }
 
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
