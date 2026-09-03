@@ -485,7 +485,6 @@ fun PetalSettingsScreen(
     var isCaretBrowsing by remember { mutableStateOf(sp.getBoolean("sp_caret_browsing", false)) }
     var isTouchpadSwipeNav by remember { mutableStateOf(sp.getBoolean("sp_touchpad_swipe_nav", true)) }
     var searchEngineIndex by remember { mutableStateOf(sp.getString("sp_search_engine", "0") ?: "0") }
-    var torrentEngineMode by remember { mutableStateOf(sp.getString("sp_torrent_engine", "1DM") ?: "1DM") }
     var showEngineSheet by remember { mutableStateOf(false) }
 
     DisposableEffect(sp) {
@@ -2254,108 +2253,8 @@ fun PetalSettingsScreen(
                             }
 
                             // 8. Miscellaneous Settings Category
-                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "download torrent engine 1dm manager external apps open youtube maps apps launch")) {
-                                SettingsCategoryCard(title = "Miscellaneous & Download Options", iconRes = com.petal.browser.R.drawable.download_2_filled) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Download,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Text(
-                                                text = "Download Engine",
-                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                        Text(
-                                            text = "Select your preferred engine for downloads, torrents, and magnet links:",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-
-                                        val engineItems = com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.values().map { mode ->
-                                            com.petal.browser.ui.components.ExpressiveSegmentItem(
-                                                id = mode.key,
-                                                label = mode.title,
-                                                icon = when (mode) {
-                                                    com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_1DM -> Icons.Rounded.Speed
-                                                    com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_EMBEDDED -> Icons.Rounded.Download
-                                                }
-                                            )
-                                        }
-
-                                        com.petal.browser.ui.components.ExpressiveButtonGroup(
-                                            items = engineItems,
-                                            selectedId = torrentEngineMode,
-                                            onItemSelected = { selectedKey ->
-                                                torrentEngineMode = selectedKey
-                                                val mode = com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.values().firstOrNull { it.key.equals(selectedKey, ignoreCase = true) }
-                                                    ?: com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_1DM
-                                                com.petal.browser.torrent.PetalTorrentEngineManager.setEngineMode(context, mode)
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-
-                                        val activeEngineMode = com.petal.browser.torrent.PetalTorrentEngineManager.getSelectedEngineMode(context)
-                                        Surface(
-                                            shape = RoundedCornerShape(16.dp),
-                                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(14.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                            ) {
-                                                Surface(
-                                                    shape = CircleShape,
-                                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                                    modifier = Modifier.size(38.dp)
-                                                ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        Icon(
-                                                             imageVector = when (activeEngineMode) {
-                                                                com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_1DM -> Icons.Rounded.Speed
-                                                                com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_EMBEDDED -> Icons.Rounded.Download
-                                                            },
-                                                            contentDescription = null,
-                                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                            modifier = Modifier.size(20.dp)
-                                                        )
-                                                    }
-                                                }
-
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = activeEngineMode.title,
-                                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Spacer(Modifier.height(2.dp))
-                                                    Text(
-                                                        text = activeEngineMode.description,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
+                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "external apps open youtube maps apps launch")) {
+                                SettingsCategoryCard(title = "External Applications & Links", iconRes = com.petal.browser.R.drawable.download_2_filled) {
                                     ToggleRow(
                                         title = "Auto Open External Apps",
                                         subtitle = "Allow YouTube, Maps & Play Store links to open in external native apps instead of Petal",
