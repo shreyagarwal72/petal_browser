@@ -2301,7 +2301,7 @@ fun PetalSettingsScreen(
 
                                         Button(
                                             onClick = {
-                                                com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.VIRTUAL_KEY, 0.8f)
+                                                com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.8f)
                                                 com.petal.browser.logger.PetalAppLogger.simulateCrash()
                                             },
                                             modifier = Modifier.weight(1f),
