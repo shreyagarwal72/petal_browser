@@ -500,6 +500,8 @@ fun PetalSettingsScreen(
     var isReaderModeDetection by remember { mutableStateOf(sp.getBoolean("sp_reader_mode_detection", true)) }
     var isCaretBrowsing by remember { mutableStateOf(sp.getBoolean("sp_caret_browsing", false)) }
     var isTouchpadSwipeNav by remember { mutableStateOf(sp.getBoolean("sp_touchpad_swipe_nav", true)) }
+    var isAddressBarSwipeTabs by remember { mutableStateOf(sp.getBoolean("sp_address_bar_swipe_tabs", true)) }
+    var isAddressBarQuickActions by remember { mutableStateOf(sp.getBoolean("sp_address_bar_quick_actions", true)) }
     var searchEngineIndex by remember { mutableStateOf(sp.getString("sp_search_engine", "0") ?: "0") }
     var showEngineSheet by remember { mutableStateOf(false) }
 
@@ -2213,6 +2215,28 @@ fun PetalSettingsScreen(
                                         onCheckedChange = { newValue ->
                                             isTouchpadSwipeNav = newValue
                                             sp.edit().putBoolean("sp_touchpad_swipe_nav", newValue).apply()
+                                        }
+                                    )
+
+                                    ToggleRow(
+                                        title = "Address Bar Horizontal Swipe to Switch Tabs",
+                                        subtitle = "Swipe left or right across the address bar pill to fluidly switch between open tabs",
+                                        icon = Icons.Rounded.Swipe,
+                                        checked = isAddressBarSwipeTabs,
+                                        onCheckedChange = { newValue ->
+                                            isAddressBarSwipeTabs = newValue
+                                            sp.edit().putBoolean("sp_address_bar_swipe_tabs", newValue).apply()
+                                        }
+                                    )
+
+                                    ToggleRow(
+                                        title = "Address Bar Long-Press Quick Actions",
+                                        subtitle = "Long press the address bar for quick actions: Clean Copy, Paste & Go, Bookmark, and Hard Refresh",
+                                        icon = Icons.Rounded.TouchApp,
+                                        checked = isAddressBarQuickActions,
+                                        onCheckedChange = { newValue ->
+                                            isAddressBarQuickActions = newValue
+                                            sp.edit().putBoolean("sp_address_bar_quick_actions", newValue).apply()
                                         }
                                     )
 
