@@ -2472,7 +2472,7 @@ fun PetalSettingsScreen(
                                 contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/html")
                             ) { uri: android.net.Uri? ->
                                 if (uri != null) {
-                                    com.petal.browser.unit.BookmarkHtmlImporterExporter.exportToUri(context, uri)
+                                    com.petal.browser.unit.BookmarkHtmlImporterExporter.exportToUri(context, uri, format = "html")
                                 }
                             }
 
