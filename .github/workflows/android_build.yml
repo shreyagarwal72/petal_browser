@@ -13,6 +13,8 @@ jobs:
   build:
     name: Build Android App Bundle & APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+UseG1GC -Dorg.gradle.daemon=false"
 
@@ -112,31 +114,54 @@ jobs:
 
       - name: Upload Release APK Artifacts
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: petal-browser-release-apk
           path: signed_apks/*.apk
-          retention-days: 30
+          retention-days: 1
 
       - name: Upload Play Store App Bundle Artifact (.aab)
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: petal-browser-playstore-aab
           path: signed_bundle/*.aab
-          retention-days: 30
+          retention-days: 1
 
-  release:
-    name: Publish GitHub Release
-    needs: build
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+      - name: Prepare Release Files
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
+        run: |
+          mkdir -p dist
+          find signed_apks signed_bundle -type f
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          for f in signed_apks/*.apk; do
+            if [ -f "$f" ]; then
+              if [[ "$f" == *"arm64-v8a"* ]]; then
+                cp "$f" dist/petal-browser-arm64-v8a-release.apk
+              elif [[ "$f" == *"armeabi-v7a"* ]]; then
+                cp "$f" dist/petal-browser-armeabi-v7a-release.apk
+              elif [[ "$f" == *"x86_64"* ]]; then
+                cp "$f" dist/petal-browser-x86_64-release.apk
+              elif [[ "$f" == *"x86"* ]]; then
+                cp "$f" dist/petal-browser-x86-release.apk
+              elif [[ "$f" == *"universal"* ]]; then
+                cp "$f" dist/petal-browser-universal-release.apk
+              else
+                cp "$f" dist/$(basename "$f")
+              fi
+            fi
+          done
+
+          for f in signed_bundle/*.aab; do
+            if [ -f "$f" ]; then
+              cp "$f" dist/petal-browser-playstore-release.aab
+            fi
+          done
+
+          ls -la dist/
 
       - name: Extract App Version and Changelog
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
         id: get_version
         run: |
           VERSION=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '"' '{print $2}')
@@ -153,46 +178,8 @@ jobs:
             echo "CHANGELOG=Release v$VERSION" >> $GITHUB_ENV
           fi
 
-      - name: Download Release APK Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: petal-browser-release-apk
-          path: apks/release
-
-      - name: Download Play Store App Bundle Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: petal-browser-playstore-aab
-          path: aab/release
-
-      - name: Prepare Release Files
-        run: |
-          mkdir -p dist
-          find apks/release aab/release -type f
-
-          for f in apks/release/*.apk; do
-            if [[ "$f" == *"arm64-v8a"* ]]; then
-              cp "$f" dist/petal-browser-arm64-v8a-release.apk
-            elif [[ "$f" == *"armeabi-v7a"* ]]; then
-              cp "$f" dist/petal-browser-armeabi-v7a-release.apk
-            elif [[ "$f" == *"x86_64"* ]]; then
-              cp "$f" dist/petal-browser-x86_64-release.apk
-            elif [[ "$f" == *"x86"* ]]; then
-              cp "$f" dist/petal-browser-x86-release.apk
-            elif [[ "$f" == *"universal"* ]]; then
-              cp "$f" dist/petal-browser-universal-release.apk
-            else
-              cp "$f" dist/$(basename "$f")
-            fi
-          done
-
-          for f in aab/release/*.aab; do
-            cp "$f" dist/petal-browser-playstore-release.aab
-          done
-
-          ls -la dist/
-
       - name: Create or Update GitHub Release
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || env.APP_VERSION }}
