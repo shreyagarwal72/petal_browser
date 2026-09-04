@@ -486,6 +486,9 @@ fun PetalSettingsScreen(
     var isJavaScript by remember { mutableStateOf(sp.getBoolean("sp_javascript", true)) }
     var isBlockPopups by remember { mutableStateOf(sp.getBoolean("sp_block_popups", true)) }
     var isAutoOpenApps by remember { mutableStateOf(sp.getBoolean("sp_auto_open_apps", false)) }
+    var downloadManagerMode by remember {
+        mutableStateOf(sp.getString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP) ?: com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP)
+    }
     var isSupportiveAds by remember { mutableStateOf(sp.getBoolean(com.petal.browser.ads.PetalSupportiveAdsManager.KEY_SUPPORTIVE_ADS_ENABLED, false)) }
     var isTouchHaptics by remember { mutableStateOf(sp.getBoolean("sp_touch_haptics", true)) }
     var isPredictiveBackJunction by remember { mutableStateOf(sp.getBoolean("sp_predictive_back_animation", true)) }
@@ -2350,7 +2353,209 @@ fun PetalSettingsScreen(
                             }
 
                             // 8. Miscellaneous Settings Category
-                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "external apps open youtube maps apps launch crash report diagnostics logs zip")) {
+                            if ((scaffoldCategory == SettingsCategory.MISCELLANEOUS || searchQuery.isNotBlank()) && matchesSearch("Miscellaneous", "download manager default download external download 1dm adm ab download manager navi external apps open youtube maps apps launch crash report diagnostics logs zip")) {
+                                val installedDownloaders = remember(context) {
+                                    com.petal.browser.unit.ExternalDownloadManagerHelper.getInstalledDownloaders(context)
+                                }
+
+                                SettingsCategoryCard(title = "Default Download Manager", icon = Icons.Rounded.Download) {
+                                    Text(
+                                        text = "Choose whether downloads are handled by Petal's high-speed in-app downloader or redirected to an external download manager.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Option 1: In-App Downloader (Default)
+                                    val isInApp = downloadManagerMode == com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (isInApp) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                                        border = BorderStroke(
+                                            width = if (isInApp) 2.dp else 1.dp,
+                                            color = if (isInApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                downloadManagerMode = com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP
+                                                sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP).apply()
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (isInApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Speed,
+                                                        contentDescription = null,
+                                                        tint = if (isInApp) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "In-App Downloader (Default)",
+                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Built-in parallel multi-threaded chunked downloader with real-time Live Alert notifications",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            RadioButton(
+                                                selected = isInApp,
+                                                onClick = {
+                                                    downloadManagerMode = com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP
+                                                    sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP).apply()
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    // Option 2: Detected installed download managers
+                                    installedDownloaders.forEach { downloader ->
+                                        val isSelected = downloadManagerMode.equals(downloader.key, ignoreCase = true)
+                                        Surface(
+                                            shape = RoundedCornerShape(16.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                                            border = BorderStroke(
+                                                width = if (isSelected) 2.dp else 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    downloadManagerMode = downloader.key
+                                                    sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, downloader.key).apply()
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                    modifier = Modifier.size(36.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.OpenInNew,
+                                                            contentDescription = null,
+                                                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                }
+
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = downloader.displayName,
+                                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = "Installed external download manager with auto-redirect",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+
+                                                RadioButton(
+                                                    selected = isSelected,
+                                                    onClick = {
+                                                        downloadManagerMode = downloader.key
+                                                        sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, downloader.key).apply()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Option 3: External App (Chooser)
+                                    val isExternalAuto = downloadManagerMode == com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (isExternalAuto) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                                        border = BorderStroke(
+                                            width = if (isExternalAuto) 2.dp else 1.dp,
+                                            color = if (isExternalAuto) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                downloadManagerMode = com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO
+                                                sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO).apply()
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (isExternalAuto) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.OpenInNew,
+                                                        contentDescription = null,
+                                                        tint = if (isExternalAuto) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "External App (Auto Chooser)",
+                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Prompt system chooser or dispatch directly to any available external downloader",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            RadioButton(
+                                                selected = isExternalAuto,
+                                                onClick = {
+                                                    downloadManagerMode = com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO
+                                                    sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO).apply()
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
                                 SettingsCategoryCard(title = "External Applications & Links", iconRes = com.petal.browser.R.drawable.download_2_filled) {
                                     ToggleRow(
                                         title = "Auto Open External Apps",
