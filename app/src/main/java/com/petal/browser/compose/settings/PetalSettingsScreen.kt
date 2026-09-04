@@ -197,7 +197,7 @@ enum class SettingsCategory(val title: String, val subtitle: String, val iconRes
     EXPERIMENTAL("Experimental", "App language, experimental features and advanced settings", com.petal.browser.R.drawable.build_filled),
     MISCELLANEOUS("Miscellaneous", "Download engine, external apps handling and extra browser tools", com.petal.browser.R.drawable.download_2_filled),
     DATA_STORAGE("Data & Backup", "Backup and restore history, bookmarks & settings", com.petal.browser.R.drawable.backup_filled),
-    UPDATER("App Updates", "Check for updates and auto-check on launch", com.petal.browser.R.drawable.update_rounded),
+    ADS("Supportive Ads", "Configure AdMob supportive ad banner preferences", com.petal.browser.R.drawable.paid),
     ABOUT("About & Developer", "App version, licenses, GitHub & developer", com.petal.browser.R.drawable.info_filled)
 }
 
@@ -486,7 +486,7 @@ fun PetalSettingsScreen(
     var isJavaScript by remember { mutableStateOf(sp.getBoolean("sp_javascript", true)) }
     var isBlockPopups by remember { mutableStateOf(sp.getBoolean("sp_block_popups", true)) }
     var isAutoOpenApps by remember { mutableStateOf(sp.getBoolean("sp_auto_open_apps", false)) }
-    var isCheckUpdateOnLaunch by remember { mutableStateOf(sp.getBoolean("sp_check_update_on_launch", true)) }
+    var isSupportiveAds by remember { mutableStateOf(sp.getBoolean(com.petal.browser.ads.PetalSupportiveAdsManager.KEY_SUPPORTIVE_ADS_ENABLED, false)) }
     var isTouchHaptics by remember { mutableStateOf(sp.getBoolean("sp_touch_haptics", true)) }
     var isPredictiveBackJunction by remember { mutableStateOf(sp.getBoolean("sp_predictive_back_animation", true)) }
     var isDepthBlurJunction by remember { mutableStateOf(sp.getBoolean("sp_depth_blur_effects", true)) }
@@ -637,7 +637,7 @@ fun PetalSettingsScreen(
                                     SettingsCategory.EXPERIMENTAL,
                                     SettingsCategory.MISCELLANEOUS,
                                     SettingsCategory.DATA_STORAGE,
-                                    SettingsCategory.UPDATER,
+                                    SettingsCategory.ADS,
                                     SettingsCategory.ABOUT
                                 )
 
@@ -1982,7 +1982,7 @@ fun PetalSettingsScreen(
                                         checked = isPredictiveBackJunction,
                                         onCheckedChange = { newValue ->
                                             isPredictiveBackJunction = newValue
-                                            com.petal.browser.predictive.PetalPredictiveJunction.setPredictiveBackEnabled(newValue)
+                                            com.petal.browser.predictive.PetalPredictiveJunction.setPredictiveBackEnabled(sp, newValue)
                                         }
                                     )
 
@@ -1993,7 +1993,7 @@ fun PetalSettingsScreen(
                                         checked = isDepthBlurJunction,
                                         onCheckedChange = { newValue ->
                                             isDepthBlurJunction = newValue
-                                            com.petal.browser.predictive.PetalPredictiveJunction.setDepthBlurEnabled(newValue)
+                                            com.petal.browser.predictive.PetalPredictiveJunction.setDepthBlurEnabled(sp, newValue)
                                         }
                                     )
 
@@ -2605,130 +2605,31 @@ fun PetalSettingsScreen(
                                 }
                             }
 
-                            // 9. App Updates & Inbuilt Updater Section
-                            if ((scaffoldCategory == SettingsCategory.UPDATER || searchQuery.isNotBlank()) && matchesSearch("App Updates", "update updater version check launch github download upgrade")) {
-                                SettingsCategoryCard(title = "App Updates & Inbuilt Updater", iconRes = com.petal.browser.R.drawable.update_rounded) {
+                            // 9. Supportive Ads Section
+                            if ((scaffoldCategory == SettingsCategory.ADS || searchQuery.isNotBlank()) && matchesSearch("Supportive Ads", "ads admob banner monetization developer support sponsor")) {
+                                SettingsCategoryCard(title = "Supportive Ads", iconRes = com.petal.browser.R.drawable.paid) {
                                     ToggleRow(
-                                        title = "Check for Updates on Launch",
-                                        subtitle = "Automatically check for new browser releases when app starts",
-                                        icon = Icons.Rounded.SystemUpdate,
-                                        checked = isCheckUpdateOnLaunch,
+                                        title = "Enable Supportive Ads",
+                                        subtitle = "Display unintrusive banner ads on the history screen to support continued open-source development",
+                                        icon = Icons.Rounded.Favorite,
+                                        checked = isSupportiveAds,
                                         onCheckedChange = { newValue ->
-                                            isCheckUpdateOnLaunch = newValue
-                                            sp.edit().putBoolean("sp_check_update_on_launch", newValue).apply()
+                                            isSupportiveAds = newValue
+                                            com.petal.browser.ads.PetalSupportiveAdsManager.setSupportiveAdsEnabled(context, newValue)
                                         }
                                     )
 
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                    if (isSupportiveAds) {
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                                    var isCheckingUpdate by remember { mutableStateOf(false) }
+                                        Text(
+                                            text = "Preview of Supportive Ad Banner:",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
 
-                                    Surface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                            Surface(
-                                                shape = CircleShape,
-                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(34.dp)
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Icon(
-                                                        Icons.Rounded.Sync,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = "Check for Updates Now",
-                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                    maxLines = 1,
-                                                    softWrap = false,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = if (isCheckingUpdate) "Checking for updates..." else "Version v$appVersionName ($appVersionCode)",
-                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    maxLines = 1,
-                                                    softWrap = false,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            if (isCheckingUpdate) {
-                                                com.petal.browser.compose.composable.ContainedLoadingIndicator(
-                                                    modifier = Modifier.size(32.dp)
-                                                )
-                                            } else {
-                                                Button(
-                                                    onClick = {
-                                                        com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.7f)
-                                                        isCheckingUpdate = true
-                                                        var act: android.app.Activity? = null
-                                                        var ctx = context
-                                                        while (ctx is android.content.ContextWrapper) {
-                                                            if (ctx is android.app.Activity) {
-                                                                act = ctx
-                                                                break
-                                                            }
-                                                            ctx = ctx.baseContext
-                                                        }
-                                                        if (act != null) {
-                                                            com.petal.browser.unit.UpdateUnit.checkForUpdates(act, false) {
-                                                                isCheckingUpdate = false
-                                                            }
-                                                        } else {
-                                                            isCheckingUpdate = false
-                                                            com.petal.browser.view.NinjaToast.show(context, "Checking for updates...")
-                                                        }
-                                                    },
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                                ) {
-                                                    Icon(Icons.Rounded.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                    Spacer(Modifier.width(4.dp))
-                                                    Text("Check", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.6f)
-                                            var act: android.app.Activity? = null
-                                            var ctx = context
-                                            while (ctx is android.content.ContextWrapper) {
-                                                if (ctx is android.app.Activity) {
-                                                    act = ctx
-                                                    break
-                                                }
-                                                ctx = ctx.baseContext
-                                            }
-                                            if (act is androidx.activity.ComponentActivity) {
-                                                com.petal.browser.ui.components.PetalUpdateSheetBridge.showChangelogHistorySheet(act)
-                                            } else {
-                                                com.petal.browser.view.NinjaToast.show(context, "Fetching release history...")
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().height(46.dp),
-                                        shape = RoundedCornerShape(14.dp)
-                                    ) {
-                                        Icon(Icons.Rounded.History, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("View All Release Changelogs")
+                                        com.petal.browser.ads.PetalSupportiveAdBanner()
                                     }
                                 }
                             }
