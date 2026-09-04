@@ -542,12 +542,23 @@ fun PetalSettingsScreen(
         }
     }
 
+    val searchResult = remember(searchQuery) {
+        PetalSettingsSearchIndex.search(searchQuery)
+    }
+
     fun matchesSearch(sectionTitle: String, keywords: String): Boolean {
         if (searchQuery.isBlank()) return true
         val terms = searchQuery.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (terms.isEmpty()) return true
         val combinedSearchTarget = (sectionTitle + " " + keywords).lowercase()
-        return terms.all { term -> combinedSearchTarget.contains(term) }
+        val directMatch = terms.all { term -> combinedSearchTarget.contains(term) }
+        if (directMatch) return true
+        val corrected = searchResult.didYouMean
+        if (corrected != null) {
+            val correctedTerms = corrected.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            return correctedTerms.all { term -> combinedSearchTarget.contains(term) }
+        }
+        return false
     }
 
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -596,6 +607,52 @@ fun PetalSettingsScreen(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                         )
                     )
+
+                    // Typo / Misspelling Suggestion Banner
+                    val didYouMean = searchResult.didYouMean
+                    if (searchQuery.isNotBlank() && didYouMean != null) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f),
+                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { searchQuery = didYouMean }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoFixHigh,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Did you mean:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                                    )
+                                    Text(
+                                        text = didYouMean,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                                Text(
+                                    text = "Apply",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         ) { innerPadding ->
