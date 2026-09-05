@@ -1,3 +1,12 @@
+### v2.7.4
+
+- **🔍 Gesture Diagnostics & Stability**:
+  - **Back Navigation Trace Telemetry**: Integrated lightweight diagnostic logging (`PETAL_BACK_DEBUG`) to accurately monitor system edge swipe dispatching and `OnBackPressedCallback` invocation states without altering native navigation flows.
+- **📜 Compliance & Documentation**:
+  - **Play Store Privacy Policy**: Added full transparent Privacy Policy documentation detailing zero personal data collection, sandboxed device storage, local biometric authentication, and advertising preferences.
+- **🔒 Zero Data Loss**:
+  - Full backward compatibility guaranteed across bookmarks, browsing history, saved tabs, and user preferences.
+
 ### v2.7.3
 
 - **📦 Build & App Bundle Language Compliance**:
