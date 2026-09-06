@@ -167,7 +167,9 @@ import com.petal.browser.view.NinjaToast;
 import com.petal.browser.view.NinjaWebView;
 import com.petal.browser.view.AdapterRecord;
 import com.petal.browser.view.SwipeTouchListener;
+import dagger.hilt.android.AndroidEntryPoint;
 
+@AndroidEntryPoint
 public class BrowserActivity extends AppCompatActivity implements BrowserController {
 
     // Menus
@@ -239,7 +241,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public long filterBy;
     public boolean filter;
     public ValueCallback<Uri[]> filePathCallback = null;
-    public AlbumController currentAlbumController = null;
+    public static AlbumController currentAlbumController = null;
     public ValueCallback<Uri[]> mFilePathCallback;
     public String mCameraPhotoPath = null;
     public com.petal.browser.media.PetalMediaSessionService mediaService;
@@ -349,6 +351,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public static boolean canNinjaGoBack() {
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            return ((com.petal.browser.view.PetalGeckoView) currentAlbumController).canGoBack();
+        }
         return ninjaWebView != null && ninjaWebView.canGoBack();
     }
 
@@ -653,6 +658,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        }
 
         // Chrome-style Tab Session Restoration & Rehydration
         try {
@@ -824,7 +832,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         super.onResume();
         predictiveBackStartedOnOverlay = false;
         applyAddressBarPosition();
-        if (ninjaWebView != null) {
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
+        } else if (ninjaWebView != null) {
             ninjaWebView.onResume();
             ninjaWebView.resumeTimers();
         }
@@ -839,7 +849,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (sp.getBoolean("pdf_create", false)) {
             sp.edit().putBoolean("pdf_create", false).apply();
             String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) +"?";
-            Snackbar snackbar = Snackbar.make(ninjaWebView, text, Snackbar.LENGTH_SHORT);
+            View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView : findViewById(android.R.id.content));
+            Snackbar snackbar = Snackbar.make(anchor, text, Snackbar.LENGTH_SHORT);
             HelperUnit.makeSnackbarRound(snackbar);
             snackbar.setAction(context.getString(R.string.app_ok), v -> showDownloads());
             snackbar.show();
@@ -1154,7 +1165,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_MENU:
-                showOverflow(null, null, 0, ninjaWebView != null ? ninjaWebView.getTitle() : "", ninjaWebView != null ? ninjaWebView.getUrl() : "", null, null, 0);
+                String title = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : "");
+                String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                showOverflow(null, null, 0, title, url, null, null, 0);
                 return true;
             case KeyEvent.KEYCODE_F7:
                 boolean caretState = com.petal.browser.accessibility.PetalAccessibilityEngine.toggleCaretBrowsing(this, ninjaWebView);
@@ -1268,7 +1281,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 if (bottomNavCompose != null) bottomNavCompose.setVisibility(VISIBLE);
                 if (refreshBarCompose != null) refreshBarCompose.setVisibility(VISIBLE);
                 if (mainProgressBar != null) mainProgressBar.setVisibility(VISIBLE);
-                if (appBar != null && currentAlbumController != null && !isHomePage(ninjaWebView != null ? ninjaWebView.getUrl() : "")) {
+                String activeUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                if (appBar != null && currentAlbumController != null && !isHomePage(activeUrl)) {
                     appBar.setVisibility(VISIBLE);
                 }
 
@@ -1354,8 +1368,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             bottomNavCompose.setVisibility(inPip ? GONE : VISIBLE);
         }
 
-        String url = overrideUrl != null ? overrideUrl : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
-        boolean isIncognitoTab = ninjaWebView != null && ninjaWebView.isIncognito();
+        String url = overrideUrl != null ? overrideUrl : (currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : ""));
+        boolean isIncognitoTab = (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView)
+                ? ((com.petal.browser.view.PetalGeckoView) currentAlbumController).isIncognito()
+                : (ninjaWebView != null && ninjaWebView.isIncognito());
         if (isIncognitoTab) {
             com.petal.browser.compose.incognito.PetalIncognitoSessionManager.enableIncognitoSecurity(this);
         } else {
@@ -1382,7 +1398,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 public void onSearch(String query) {
                     if (query != null && !query.trim().isEmpty()) {
                         String targetUrl = BrowserUnit.queryWrapper(BrowserActivity.this, query.trim());
-                        if (ninjaWebView != null) {
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(targetUrl);
+                            showAlbum(currentAlbumController, targetUrl);
+                        } else if (ninjaWebView != null) {
                             ninjaWebView.loadUrl(targetUrl);
                             showAlbum(currentAlbumController, targetUrl);
                         }
@@ -1403,11 +1422,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         showCreditsScreen();
                         return;
                     }
-                    if (ninjaWebView != null) {
-                        String targetUrl = u;
-                        if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-                            targetUrl = BrowserUnit.queryWrapper(BrowserActivity.this, u);
-                        }
+                    String targetUrl = u;
+                    if (targetUrl != null && !targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+                        targetUrl = BrowserUnit.queryWrapper(BrowserActivity.this, u);
+                    }
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(targetUrl);
+                        showAlbum(currentAlbumController, targetUrl);
+                    } else if (ninjaWebView != null) {
                         ninjaWebView.loadUrl(targetUrl);
                         showAlbum(currentAlbumController, targetUrl);
                     }
@@ -1428,10 +1450,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                         final EditText inputUrl = new EditText(BrowserActivity.this);
                         inputUrl.setHint("Website URL (e.g. https://google.com)");
-                        if (ninjaWebView != null && ninjaWebView.getUrl() != null && !isHomePage(ninjaWebView.getUrl())) {
-                            inputUrl.setText(ninjaWebView.getUrl());
-                            if (ninjaWebView.getTitle() != null) {
-                                inputTitle.setText(ninjaWebView.getTitle());
+                        String activeU = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : null);
+                        String activeT = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : null);
+                        if (activeU != null && !isHomePage(activeU)) {
+                            inputUrl.setText(activeU);
+                            if (activeT != null) {
+                                inputTitle.setText(activeT);
                             }
                         }
                         layout.addView(inputUrl);
@@ -1501,7 +1525,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                 @Override
                 public void onOpenSettings() {
-                    showOverflow(null, null, 0, ninjaWebView != null ? ninjaWebView.getTitle() : "", ninjaWebView != null ? ninjaWebView.getUrl() : "", null, null, 0);
+                    String title = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : "");
+                    String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                    showOverflow(null, null, 0, title, url, null, null, 0);
                 }
 
                 @Override
@@ -2540,7 +2566,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             });
             search_textField.setEndIconOnLongClickListener(v -> {
                 String query = (search_input != null && search_input.getText() != null) ? search_input.getText().toString().trim() : "";
-                if (!query.isEmpty() && (ninjaWebView == null || !query.equals(ninjaWebView.getUrl()))) {
+                String activeUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                if (!query.isEmpty() && !query.equals(activeUrl)) {
                     showDialogCustomSearches(query);
                 } else {
                     NinjaToast.show(this, R.string.toast_input_empty);
@@ -2657,8 +2684,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public static boolean isCurrentTabHomeOrBlank() {
-        if (ninjaWebView == null) return true;
-        String url = ninjaWebView.getUrl();
+        String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
         if (url == null || url.trim().isEmpty()) return true;
         String clean = url.trim().toLowerCase(java.util.Locale.ROOT);
         if (clean.equals("about:blank") || clean.equals("about:home") || clean.equals("petal://home") || clean.equals("petal://start") || clean.contains("petal_home.html")) {
@@ -2800,14 +2826,16 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     private Runnable aiResearchTimeoutRunnable;
 
     public void showAiResearchSheet() {
-        if (ninjaWebView == null) return;
+        if (currentAlbumController == null && ninjaWebView == null) return;
 
         // Guard against rapid repeated taps queuing up multiple evaluateJavascript
         // calls on the WebView - this is what made the browser appear to hang.
         if (isAiResearchExtracting) return;
 
-        final String currentUrl = ninjaWebView.getUrl();
-        final String currentTitle = ninjaWebView.getTitle() != null ? ninjaWebView.getTitle() : "";
+        final String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : ninjaWebView.getUrl();
+        final String currentTitle = (currentAlbumController != null && currentAlbumController.getTitle() != null)
+                ? currentAlbumController.getTitle()
+                : (ninjaWebView != null && ninjaWebView.getTitle() != null ? ninjaWebView.getTitle() : "");
 
         if (!com.petal.browser.compose.ai.PetalAiResearchEngine.INSTANCE.isProperWebSite(currentUrl)) {
             return;
@@ -2815,6 +2843,22 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         isAiResearchExtracting = true;
         NinjaToast.show(BrowserActivity.this, "Analyzing page\u2026");
+
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            isAiResearchExtracting = false;
+            com.petal.browser.ui.components.PetalAiResearchBridge.showAiFeature(
+                BrowserActivity.this,
+                currentTitle,
+                currentUrl,
+                currentTitle
+            );
+            return;
+        }
+
+        if (ninjaWebView == null) {
+            isAiResearchExtracting = false;
+            return;
+        }
 
         // Safety timeout: if the page's JS engine is busy or the callback never
         // fires (huge/complex DOM, stalled page, cross-origin edge cases), don't
@@ -3605,8 +3649,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public void savePageOffline() {
-        if (ninjaWebView == null || ninjaWebView.getUrl() == null) return;
-        String url = ninjaWebView.getUrl();
+        if (currentAlbumController == null || currentAlbumController.getUrl() == null) return;
+        String url = currentAlbumController.getUrl();
         if (url.startsWith("about:") || url.startsWith("petal://") || url.startsWith("file://")) {
             NinjaToast.show(this, "Cannot save internal page offline");
             return;
@@ -3617,23 +3661,42 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             offlineDir.mkdirs();
         }
 
-        String rawTitle = (ninjaWebView.getTitle() != null && !ninjaWebView.getTitle().trim().isEmpty())
-                ? ninjaWebView.getTitle()
+        String rawTitle = (currentAlbumController.getTitle() != null && !currentAlbumController.getTitle().trim().isEmpty())
+                ? currentAlbumController.getTitle()
                 : HelperUnit.domain(url);
         String sanitizedTitle = rawTitle.replaceAll("[^a-zA-Z0-9._-]", "_");
-        String fileName = sanitizedTitle + "_" + System.currentTimeMillis() + ".mhtml";
+        String fileName = sanitizedTitle + "_" + System.currentTimeMillis() + ".html";
         java.io.File archiveFile = new java.io.File(offlineDir, fileName);
 
         try {
-            ninjaWebView.saveWebArchive(archiveFile.getAbsolutePath(), false, value -> {
-                if (value != null) {
-                    NinjaToast.show(BrowserActivity.this, "Saved website to view offline!");
-                    com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
-                            BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
-                } else {
-                    NinjaToast.show(BrowserActivity.this, "Failed to save page offline");
+            new Thread(() -> {
+                try {
+                    java.net.URL targetUrl = new java.net.URL(url);
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) targetUrl.openConnection();
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:154.0) Gecko/154.0 Firefox/154.0");
+                    java.io.InputStream in = conn.getInputStream();
+                    java.io.FileOutputStream out = new java.io.FileOutputStream(archiveFile);
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = in.read(buffer)) > 0) {
+                        out.write(buffer, 0, len);
+                    }
+                    out.close();
+                    in.close();
+                    conn.disconnect();
+
+                    runOnUiThread(() -> {
+                        NinjaToast.show(BrowserActivity.this, "Saved website to view offline!");
+                        com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
+                                BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error saving offline page", e);
+                    runOnUiThread(() -> NinjaToast.show(BrowserActivity.this, "Failed to save page offline"));
                 }
-            });
+            }).start();
         } catch (Exception e) {
             Log.e(TAG, "Error saving web archive offline", e);
             NinjaToast.show(BrowserActivity.this, "Failed to save page offline");
@@ -3641,8 +3704,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public void showReaderMode() {
-        if (ninjaWebView == null || ninjaWebView.getUrl() == null) return;
-        String url = ninjaWebView.getUrl();
+        if (currentAlbumController == null || currentAlbumController.getUrl() == null) return;
+        String url = currentAlbumController.getUrl();
         if (url.startsWith("about:") || url.startsWith("petal://") || url.startsWith("file://")) {
             NinjaToast.show(this, "Reader mode is not available for internal pages");
             return;
@@ -3650,7 +3713,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         try {
             captureBrowserMainPreview();
-            com.petal.browser.compose.reader.PetalReaderBridge.extractArticle(ninjaWebView, article -> {
+            com.petal.browser.compose.reader.PetalReaderBridge.extractArticle(currentAlbumController, article -> {
                 if (article != null && article.getContentText() != null && !article.getContentText().trim().isEmpty()) {
                     isOverlayScreenShowing = true;
                     contentFrame.removeAllViews();
@@ -3708,8 +3771,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 },
                 shortcut -> {
                     showAlbum(currentAlbumController);
-                    if (shortcut != null && shortcut.getUrl() != null && ninjaWebView != null) {
-                        ninjaWebView.loadUrl(shortcut.getUrl());
+                    if (shortcut != null && shortcut.getUrl() != null) {
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(shortcut.getUrl());
+                        } else if (ninjaWebView != null) {
+                            ninjaWebView.loadUrl(shortcut.getUrl());
+                        } else {
+                            addAlbum(null, shortcut.getUrl(), true);
+                        }
                     }
                     return kotlin.Unit.INSTANCE;
                 }
@@ -3731,7 +3800,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void showDialogFastToggle(String title, String url, FloatingActionButton floatingActionButton) {
 
         listStandard = new List_standard(context);
-        ninjaWebView = (NinjaWebView) currentAlbumController;
+        if (currentAlbumController instanceof NinjaWebView) {
+            ninjaWebView = (NinjaWebView) currentAlbumController;
+        }
 
         String profile;
         if (listStandard.isWhite(url)) {
@@ -3778,7 +3849,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 setProfileIcon(buttonProfile, url);
                 dialogFastToggle.cancel();
                 if (!listStandard.isWhite(url)){
-                    ninjaWebView.reload();
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+                    } else if (ninjaWebView != null) {
+                        ninjaWebView.reload();
+                    }
                 }
                 return true;
             });
@@ -4143,7 +4218,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 }
                 setProfileIcon(buttonProfile, url);
                 dialogFastToggle.cancel();
-                ninjaWebView.reload();
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+                } else if (ninjaWebView != null) {
+                    ninjaWebView.reload();
+                }
             });
 
             HelperUnit.applyBouncyTouchFeedback(ib_delete, 0.88f);
@@ -4174,14 +4253,20 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 }
                 setProfileIcon(buttonProfile, url);
                 dialogFastToggle.cancel();
-                ninjaWebView.reload();
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+                } else if (ninjaWebView != null) {
+                    ninjaWebView.reload();
+                }
             });
 
             Button ib_reload = dialogViewFastToggle.findViewById(R.id.ib_reload);
             HelperUnit.applyBouncyTouchFeedback(ib_reload);
             ib_reload.setOnClickListener(view -> {
-                if (ninjaWebView != null) {
-                    dialogFastToggle.cancel();
+                dialogFastToggle.cancel();
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+                } else if (ninjaWebView != null) {
                     ninjaWebView.reload();
                 }
             });
@@ -4967,9 +5052,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         setWebView(title, url, foreground, isIncognito);
     }
 
-    public synchronized NinjaWebView addAlbumForPopup(String title, final boolean isIncognito) {
+    public synchronized AlbumController addAlbumForPopup(String title, final boolean isIncognito) {
         setWebView(title, null, true, isIncognito, true);
-        return ninjaWebView;
+        return currentAlbumController;
     }
 
     public synchronized void addAlbumInGroup(String title, final String url, final boolean foreground, final String groupId, final String groupTitle) {
@@ -4987,7 +5072,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void triggerRebirth(Context context) {
         sp.edit().putInt("restart_changed", 0).apply();
         sp.edit().putBoolean("restoreOnRestart", true).apply();
-        Snackbar snackbar = Snackbar.make(ninjaWebView, R.string.toast_restart, Snackbar.LENGTH_SHORT);
+        View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView : findViewById(android.R.id.content));
+        Snackbar snackbar = Snackbar.make(anchor, R.string.toast_restart, Snackbar.LENGTH_SHORT);
         HelperUnit.makeSnackbarRound(snackbar);
         snackbar.setAction(context.getString(R.string.app_ok), (v -> {
             PackageManager packageManager = context.getPackageManager();
@@ -5003,14 +5089,18 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
     public void installPwaShortcut() {
         try {
-            if (ninjaWebView == null || ninjaWebView.getUrl() == null || "about:blank".equalsIgnoreCase(ninjaWebView.getUrl())) {
+            String activeUrl = currentAlbumController != null ? currentAlbumController.getUrl() : null;
+            if (activeUrl == null || activeUrl.trim().isEmpty() || "about:blank".equalsIgnoreCase(activeUrl)) {
                 NinjaToast.show(this, "No active web page to install");
                 return;
             }
-            if (ninjaWebView.getPwaManager() == null) {
-                ninjaWebView.setPwaManager(new com.petal.browser.pwa.PetalPwaManager(this, ninjaWebView, null));
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                if (gv.getPwaManager() == null) {
+                    gv.setPwaManager(new com.petal.browser.pwa.PetalPwaManager(this, gv, null));
+                }
+                gv.getPwaManager().installCurrentPwa(this);
             }
-            ninjaWebView.getPwaManager().installCurrentPwa(this);
         } catch (Exception e) {
             e.printStackTrace();
             NinjaToast.show(this, "Failed to install app");
@@ -5051,7 +5141,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public static View getView() {
-        return ninjaWebView != null ? ninjaWebView.getRootView() : null;
+        return currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView.getRootView() : null);
     }
 
     public void createWebPrintJob(WebView webView) {

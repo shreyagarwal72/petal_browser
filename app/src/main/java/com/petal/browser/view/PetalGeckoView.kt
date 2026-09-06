@@ -53,8 +53,21 @@ class PetalGeckoView @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "PetalGeckoView"
+        @JvmField
+        var globalBrowserController: BrowserController? = null
+
         @JvmStatic
-        private var globalBrowserController: BrowserController? = null
+        fun getBrowserController(): BrowserController? = globalBrowserController
+
+        @JvmStatic
+        fun getProfile(context: Context? = null): String {
+            val ctx = context ?: com.petal.browser.PetalApplication.instance
+            if (ctx != null) {
+                val sp = PreferenceManager.getDefaultSharedPreferences(ctx)
+                return sp.getString("profile", "profileStandard") ?: "profileStandard"
+            }
+            return "profileStandard"
+        }
 
         @JvmStatic
         fun getDerivedDesktopUserAgent(context: Context): String {
@@ -546,8 +559,25 @@ class PetalGeckoView @JvmOverloads constructor(
         session.purgeHistory()
     }
 
-    fun evaluateJavascript(script: String, callback: ((String?) -> Unit)?) {
-        // GeckoView executes scripts via WebExtensions or internal session delegates
+    fun reloadWithoutInit() {
+        isStopped = false
+        session.reload()
+    }
+
+    fun setProfileChanged() {
+        applySettings()
+    }
+
+    fun evaluateJavascript(script: String, callback: ((String?) -> Unit)? = null) {
+        try {
+            if (script.startsWith("javascript:")) {
+                session.loadUri(script)
+            } else {
+                session.loadUri("javascript:(function(){try{" + script + "}catch(e){}})();")
+            }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "evaluateJavascript error: " + e.message)
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -622,8 +652,6 @@ class PetalGeckoView @JvmOverloads constructor(
         globalBrowserController = controller
         album.setBrowserController(controller)
     }
-
-    fun getBrowserController(): BrowserController? = globalBrowserController
 
     fun setOnScrollChangeListener(listener: OnScrollChangeListener?) {
         this.onScrollChangeListener = listener
