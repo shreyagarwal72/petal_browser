@@ -39,7 +39,7 @@ class PetalApplication : Application() {
         instance = this
         try {
             com.petal.browser.logger.PetalAppLogger.init(this)
-            ChromiumNativeEngineCore.initialize(this)
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.getOrCreate(this)
             com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(this)
             PetalPredictiveJunction.init(
                 PreferenceManager.getDefaultSharedPreferences(this)
