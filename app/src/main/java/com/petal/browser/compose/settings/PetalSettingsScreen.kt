@@ -178,9 +178,7 @@ object PetalSettingsBridge {
                     colorStyle = colorStyle,
                     paletteId = paletteId
                 ) {
-                    com.petal.browser.ui.components.ScreenWrapper {
-                        PetalSettingsScreen(backgroundSnapshot = snapshotBitmap, initialCategory = initialCategory, onBackPress = onBackPress)
-                    }
+                    PetalSettingsScreen(backgroundSnapshot = snapshotBitmap, initialCategory = initialCategory, onBackPress = onBackPress)
                 }
             }
         }
