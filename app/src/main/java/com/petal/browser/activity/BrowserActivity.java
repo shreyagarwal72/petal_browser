@@ -167,9 +167,7 @@ import com.petal.browser.view.NinjaToast;
 import com.petal.browser.view.NinjaWebView;
 import com.petal.browser.view.AdapterRecord;
 import com.petal.browser.view.SwipeTouchListener;
-import dagger.hilt.android.AndroidEntryPoint;
 
-@AndroidEntryPoint
 public class BrowserActivity extends AppCompatActivity implements BrowserController {
 
     // Menus
@@ -665,10 +663,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // Calling it here would run before ninjaWebView / currentAlbumController are
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
-
-        if (sp.getBoolean("sp_check_update_on_launch", true)) {
-            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
-        }
 
         // Chrome-style Tab Session Restoration & Rehydration
         try {
