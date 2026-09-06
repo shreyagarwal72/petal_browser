@@ -465,6 +465,7 @@ fun PetalSettingsScreen(
 
     // Private DNS & Language States
     var privateDnsMode by remember { mutableStateOf(sp.getString("sp_private_dns_mode", "OFF") ?: "OFF") }
+    var customDohUrl by remember { mutableStateOf(sp.getString("sp_custom_doh_url", "") ?: "") }
     var appLanguage by remember { mutableStateOf(sp.getString("sp_app_language", "system") ?: "system") }
 
     // Custom Homepage & Background Play
@@ -485,6 +486,7 @@ fun PetalSettingsScreen(
     var isHttpsOnly by remember { mutableStateOf(sp.getBoolean("sp_https_only", true)) }
     var isJavaScript by remember { mutableStateOf(sp.getBoolean("sp_javascript", true)) }
     var isBlockPopups by remember { mutableStateOf(sp.getBoolean("sp_block_popups", true)) }
+    var isOpenRedirectsInBackground by remember { mutableStateOf(sp.getBoolean("sp_open_redirects_in_background", false)) }
     var isAutoOpenApps by remember { mutableStateOf(sp.getBoolean("sp_auto_open_apps", false)) }
     var downloadManagerMode by remember {
         mutableStateOf(sp.getString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP) ?: com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP)
@@ -1701,7 +1703,8 @@ fun PetalSettingsScreen(
                                         Triple("CLOUDFLARE", "Cloudflare (1.1.1.1)", "Fast & private 1.1.1.1 DNS over HTTPS"),
                                         Triple("GOOGLE", "Google Public DNS", "8.8.8.8 high performance resolution"),
                                         Triple("CLEANBROWSING", "CleanBrowsing Family Filter", "Blocks adult & malicious sites"),
-                                        Triple("OPENDNS", "OpenDNS Home", "Cisco OpenDNS security protection")
+                                        Triple("OPENDNS", "OpenDNS Home", "Cisco OpenDNS security protection"),
+                                        Triple("CUSTOM", "Custom DNS-over-HTTPS (DoH)", "Enter your preferred DoH resolver endpoint URL")
                                     )
 
                                     dnsOptions.forEach { (mode, name, desc) ->
@@ -1737,6 +1740,22 @@ fun PetalSettingsScreen(
                                                 }
                                             }
                                         }
+                                    }
+
+                                    if (privateDnsMode == "CUSTOM") {
+                                        OutlinedTextField(
+                                            value = customDohUrl,
+                                            onValueChange = {
+                                                customDohUrl = it
+                                                sp.edit().putString("sp_custom_doh_url", it).apply()
+                                            },
+                                            label = { Text("Custom DoH Endpoint URL") },
+                                            placeholder = { Text("https://dns.adguard-dns.com/dns-query") },
+                                            leadingIcon = { Icon(Icons.Rounded.Dns, contentDescription = null) },
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(14.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
 
                                     OutlinedButton(
@@ -2107,6 +2126,19 @@ fun PetalSettingsScreen(
                                         onCheckedChange = { newValue ->
                                             isBlockPopups = newValue
                                             sp.edit().putBoolean("sp_block_popups", newValue).putBoolean("profileStandard_javascriptPopUp", newValue).apply()
+                                        }
+                                    )
+
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                    ToggleRow(
+                                        title = "Open Redirect Links in Background",
+                                        subtitle = "Detect external redirect links and spawn them silently in a background tab",
+                                        icon = Icons.Rounded.TabUnselected,
+                                        checked = isOpenRedirectsInBackground,
+                                        onCheckedChange = { newValue ->
+                                            isOpenRedirectsInBackground = newValue
+                                            sp.edit().putBoolean("sp_open_redirects_in_background", newValue).apply()
                                         }
                                     )
 
