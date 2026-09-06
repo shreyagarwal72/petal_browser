@@ -1399,7 +1399,13 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 },
                 () -> closeAllIncognitoTabs()
             );
-            presentComposeScreen(incognitoHome, false);
+            contentFrame.removeAllViews();
+            isOverlayScreenShowing = false;
+            incognitoHome.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            contentFrame.addView(incognitoHome);
             if (appBar != null) appBar.setVisibility(GONE);
             hideRefreshAndProgressOverlays();
         } else if (isHomePage(url)) {
@@ -1550,11 +1556,13 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     showAccountSyncScreen();
                 }
             });
+            contentFrame.removeAllViews();
+            isOverlayScreenShowing = false;
             composeView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT
             ));
-            presentComposeScreen(composeView, false);
+            contentFrame.addView(composeView);
             if (appBar != null) appBar.setVisibility(GONE);
             hideRefreshAndProgressOverlays();
         } else {
