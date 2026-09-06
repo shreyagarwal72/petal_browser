@@ -31,26 +31,26 @@ object BrowserWebViewController {
             webView,
             object : PetalMediaBridge.MediaStateListener {
                 override fun onMediaPlay(title: String?, positionMs: Long, durationMs: Long) {
-                     activity.isMediaPlaying = true
-                     activity.updatePipParams(true)
-                     activity.mediaService?.updateMediaState(title, webView.title, true, positionMs, durationMs)
+                    activity.isMediaPlaying = true
+                    activity.updatePipParams(true)
+                    activity.mediaService?.updateMediaState(title, webView.title, true, positionMs, durationMs)
                 }
 
                 override fun onMediaPause(positionMs: Long, durationMs: Long) {
-                     activity.isMediaPlaying = false
-                     activity.updatePipParams(false)
-                     activity.mediaService?.updateMediaState(webView.title, webView.title, false, positionMs, durationMs)
+                    activity.isMediaPlaying = false
+                    activity.updatePipParams(false)
+                    activity.mediaService?.updateMediaState(webView.title, webView.title, false, positionMs, durationMs)
                 }
 
                 override fun onMediaProgress(positionMs: Long, durationMs: Long) {}
 
                 override fun onMediaPlayingStateChanged(playing: Boolean) {
-                     activity.isMediaPlaying = playing
-                     activity.updatePipParams(playing)
+                    activity.isMediaPlaying = playing
+                    activity.updatePipParams(playing)
                 }
 
                 override fun onVideoDimensionsChanged(width: Int, height: Int) {
-                     activity.updateVideoDimensions(width, height)
+                    activity.updateVideoDimensions(width, height)
                 }
             }
         )
@@ -94,7 +94,7 @@ object BrowserWebViewController {
         // Configure Media Bridge
         val bridge = PetalMediaBridge(
             activity,
-            null,
+            geckoView,
             object : PetalMediaBridge.MediaStateListener {
                 override fun onMediaPlay(title: String?, positionMs: Long, durationMs: Long) {
                     activity.isMediaPlaying = true
