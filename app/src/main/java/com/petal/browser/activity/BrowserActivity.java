@@ -1408,6 +1408,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             contentFrame.addView(incognitoHome);
             if (appBar != null) appBar.setVisibility(GONE);
             hideRefreshAndProgressOverlays();
+            updatePersistentBottomNav();
         } else if (isHomePage(url)) {
             View composeView = PetalComposeBridge.createComposeHomeView(this, BrowserContainer.size(), new PetalHomeActionHandler() {
                 @Override
@@ -1565,6 +1566,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             contentFrame.addView(composeView);
             if (appBar != null) appBar.setVisibility(GONE);
             hideRefreshAndProgressOverlays();
+            updatePersistentBottomNav();
         } else {
             if (av.getParent() != null) {
                 ((android.view.ViewGroup) av.getParent()).removeView(av);
@@ -1981,14 +1983,26 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             // showed a stale tab count/list until the user confirmed.
             closeTabConfirmation(() -> {
                 AlbumController predecessor;
-                if (controller == currentAlbumController) predecessor = ((NinjaWebView) controller).getPredecessor();
-                else predecessor = currentAlbumController;
+                if (controller == currentAlbumController) {
+                    if (controller instanceof NinjaWebView) {
+                        predecessor = ((NinjaWebView) controller).getPredecessor();
+                    } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                        predecessor = ((com.petal.browser.view.PetalGeckoView) controller).getPredecessor();
+                    } else {
+                        predecessor = null;
+                    }
+                } else {
+                    predecessor = currentAlbumController;
+                }
                 //if not the current TAB is being closed return to current TAB
                 tab_container.removeView(controller.getAlbumView());
                 int index = BrowserContainer.indexOf(controller);
                 BrowserContainer.remove(controller);
                 if (controller instanceof NinjaWebView) {
+                    ((NinjaWebView) controller).destroy();
                     com.petal.browser.unit.TabThumbnailCache.remove(((NinjaWebView) controller).getTabId());
+                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) controller).destroy();
                 }
                 com.petal.browser.unit.TabThumbnailCache.remove(String.valueOf(controller.hashCode()));
                 if ((predecessor != null) && (BrowserContainer.indexOf(predecessor) != -1)) {
@@ -2014,6 +2028,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             if (controller instanceof NinjaWebView) {
                 ((NinjaWebView) controller).destroy();
+            } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                ((com.petal.browser.view.PetalGeckoView) controller).destroy();
             }
             boolean isClosingCurrent = (controller == currentAlbumController);
             BrowserContainer.remove(controller);
