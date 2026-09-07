@@ -354,6 +354,13 @@ object PetalSettingsSearchIndex {
             category = SettingsCategory.MISCELLANEOUS,
             keywords = listOf("update on launch", "auto check updates", "version check", "release notify")
         ),
+        SettingsSearchItem(
+            id = "misc_inactive_tabs",
+            title = "Inactive Tabs & Auto-Archival",
+            subtitle = "Automatically move unused tabs (7, 14, 21 days) to inactive, archive duplicate tabs, and auto-close after 3 months",
+            category = SettingsCategory.MISCELLANEOUS,
+            keywords = listOf("inactive tabs", "inactive", "archive duplicate tabs", "archive tabs", "close inactive tabs", "tab cleanup", "tab management", "unused tabs", "duplicate tabs")
+        ),
 
         // ==================== DATA & BACKUP ====================
         SettingsSearchItem(
@@ -392,13 +399,20 @@ object PetalSettingsSearchIndex {
             keywords = listOf("clear data", "clear cache", "delete history", "clear cookies", "wipe data", "storage")
         ),
 
-        // ==================== SUPPORTIVE ADS ====================
+        // ==================== UPDATER & DIAGNOSTICS ====================
         SettingsSearchItem(
-            id = "ads_supportive_banner",
-            title = "Supportive Ads & Sponsorship",
-            subtitle = "Opt-in non-intrusive banner advertisements powered by Google AdMob to support browser development",
-            category = SettingsCategory.ADS,
-            keywords = listOf("ads", "admob", "banner", "supportive ads", "monetization", "developer support", "sponsor")
+            id = "updater_check_now",
+            title = "Check for Updates Now",
+            subtitle = "Query GitHub release API for new Petal Browser versions and changelogs",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("check for updates", "update app", "github release", "latest version", "apk update")
+        ),
+        SettingsSearchItem(
+            id = "updater_crash_reporting",
+            title = "Crash Reporting & Diagnostics",
+            subtitle = "View crash logs, diagnostics stack traces, and manage error reporting",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("crash logs", "diagnostics", "stack trace", "error logs", "bug report", "reporting")
         ),
 
         // ==================== ABOUT & DEVELOPER ====================
@@ -427,7 +441,7 @@ object PetalSettingsSearchIndex {
         SettingsCategory.EXPERIMENTAL,
         SettingsCategory.MISCELLANEOUS,
         SettingsCategory.DATA_STORAGE,
-        SettingsCategory.ADS,
+        SettingsCategory.UPDATER,
         SettingsCategory.ABOUT
     )
 
