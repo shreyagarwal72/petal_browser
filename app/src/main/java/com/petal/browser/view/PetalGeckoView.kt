@@ -89,6 +89,7 @@ class PetalGeckoView @JvmOverloads constructor(
     private var isIncognito: Boolean = false
     private var isForegroundTab: Boolean = false
     private var isStopped: Boolean = false
+
     private var tabId: String = "tab_${System.currentTimeMillis()}_${Math.abs(hashCode())}"
     private var tabGroupId: String? = null
     private var tabGroupTitle: String? = null
@@ -253,7 +254,6 @@ class PetalGeckoView @JvmOverloads constructor(
             }
 
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-            override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
                 val act = getHostActivity() as? com.petal.browser.activity.BrowserActivity ?: return null
                 val result = GeckoResult<GeckoSession>()
                 act.runOnUiThread {
@@ -273,6 +273,7 @@ class PetalGeckoView @JvmOverloads constructor(
                 }
                 return result
             }
+        }
 
         // Content Delegate
         session.contentDelegate = object : GeckoSession.ContentDelegate {
@@ -315,7 +316,6 @@ class PetalGeckoView @JvmOverloads constructor(
                 recoverCrashedSession()
             }
 
-            override fun onKill(session: GeckoSession) {
             override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
                 val responseUrl = response.uri
                 if (responseUrl.isNullOrBlank()) return
@@ -332,7 +332,7 @@ class PetalGeckoView @JvmOverloads constructor(
                     }
                     return
                 }
-                val fileName = android.webkit.URLUtil.guessFileName(responseUrl, null, null)
+                val fileName = HelperUnit.resolveFileName(responseUrl, null, null)
                 act.runOnUiThread {
                     com.petal.browser.ui.components.PetalDownloadDialogBridge.showDownloadConfirmation(
                         act, responseUrl, null, null, 0L
@@ -341,6 +341,7 @@ class PetalGeckoView @JvmOverloads constructor(
                     }
                 }
             }
+            override fun onKill(session: GeckoSession) {
                 // Same recovery as onCrash: the OS/Gecko killed the content process
                 // (e.g. under memory pressure), leaving the session closed and unusable.
                 android.util.Log.w(TAG, "GeckoSession content process killed for $currentUrl - reopening session")
