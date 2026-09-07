@@ -1003,9 +1003,6 @@ fun PetalSettingsScreen(
                                             }
                                         }
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     var enableLiveSuggestions by remember { mutableStateOf(sp.getBoolean("sp_enable_live_suggestions", true)) }
                                     ToggleRow(
                                         title = "Live Search Recommendations",
@@ -1379,9 +1376,6 @@ fun PetalSettingsScreen(
                                         }
                                     }
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Material You Dynamic Color Toggle
                                     ToggleRow(
                                         title = "Material You Dynamic Color",
@@ -1394,9 +1388,6 @@ fun PetalSettingsScreen(
                                             com.petal.browser.widget.PetalSearchWidgetProvider.updateAllWidgets(context)
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // AMOLED Black Toggle
                                     ToggleRow(
                                         title = "AMOLED Black Dark Mode",
@@ -1410,9 +1401,6 @@ fun PetalSettingsScreen(
                                             com.petal.browser.widget.PetalSearchWidgetProvider.updateAllWidgets(context)
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Floating Tab Bar Toggle
                                     ToggleRow(
                                         title = "Floating Tab Bar",
@@ -1424,9 +1412,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_floating_tab_bar", newValue).apply()
                                         }
                                     )
-                                    
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                                    
                                     // Material 3 Expressive Background Morphing Shapes Toggle
                                     ToggleRow(
                                         title = "M3 Expressive Morphing Shapes",
@@ -1504,10 +1489,6 @@ fun PetalSettingsScreen(
                                              }
                                          }
                                      }
-
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Expressive Colors Toggle
                                     ToggleRow(
                                         title = "Expressive Container Colors",
@@ -1519,9 +1500,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_expressive_colors", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // High Refresh Rate (120Hz+) Toggle
                                     ToggleRow(
                                         title = "High Refresh Rate (120Hz+)",
@@ -1602,9 +1580,6 @@ fun PetalSettingsScreen(
                                             shape = RoundedCornerShape(14.dp)
                                         )
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Background Video & Audio Playback Toggle
                                     ToggleRow(
                                         title = "Background Audio & Video Playback",
@@ -1616,9 +1591,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_background_play", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Auto Picture-in-Picture Toggle
                                     val isPipSupported = remember {
                                         context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -1635,9 +1607,6 @@ fun PetalSettingsScreen(
                                             }
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Force Dark Mode for Web Content Toggle
                                     ToggleRow(
                                         title = "Force Dark Web Content",
@@ -1997,9 +1966,6 @@ fun PetalSettingsScreen(
                                             }
                                         }
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Block Third-Party Tracking Cookies",
                                         subtitle = "Isolate and block cross-site cookies used for ad tracking",
@@ -2011,9 +1977,6 @@ fun PetalSettingsScreen(
                                                 .putBoolean("profileStandard_cookiesThirdParty", !newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Canvas, Audio & Font Fingerprint Shield",
                                         subtitle = "Randomize canvas, WebGL, AudioContext, and font geometry to defeat browser fingerprinting",
@@ -2025,9 +1988,6 @@ fun PetalSettingsScreen(
                                                 .putBoolean("profileStandard_fingerPrintProtection", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "WebRTC IP Leak Shield",
                                         subtitle = "Prevent WebRTC peer connections from exposing your local or real IP address",
@@ -2038,9 +1998,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_webrtc_protection", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Do Not Track & Global Privacy Control (GPC)",
                                         subtitle = "Broadcast DNT: 1 and Sec-GPC: 1 signals requesting websites not to sell or share your data",
@@ -2051,9 +2008,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_dnt_gpc", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Strict Referrer Trimming",
                                         subtitle = "Strip cross-origin URL paths from referrer headers to protect browsing privacy",
@@ -2064,9 +2018,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_trim_referrers", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "WebAuthn & Passkey Support",
                                         subtitle = "Allow websites to authenticate passwordless sign-ins using biometric passkeys, hardware tokens & Google Password Manager",
@@ -2077,9 +2028,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_webauthn_enabled", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Block Popup Windows",
                                         subtitle = "Prevent unwanted popups and redirect windows",
@@ -2090,9 +2038,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_block_popups", newValue).putBoolean("profileStandard_javascriptPopUp", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Open Redirect Links in Background",
                                         subtitle = "Detect external redirect links and spawn them silently in a background tab",
@@ -2103,9 +2048,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_open_redirects_in_background", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "HTTPS Security Enforcer",
                                         subtitle = "Automatically upgrade connections to HTTPS",
@@ -2116,9 +2058,6 @@ fun PetalSettingsScreen(
                                             sp.edit().putBoolean("sp_https_only", newValue).apply()
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Enable JavaScript",
                                         subtitle = "Required for modern web features",
@@ -2211,9 +2150,6 @@ fun PetalSettingsScreen(
                                             }
                                         }
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -2329,9 +2265,6 @@ fun PetalSettingsScreen(
                                             }
                                         }
                                     }
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     ToggleRow(
                                         title = "Force Enable Zoom (Override Viewport)",
                                         subtitle = "Override website viewport locks (user-scalable=no) to allow pinch-to-zoom on all pages",
@@ -2679,9 +2612,6 @@ fun PetalSettingsScreen(
                                             com.petal.browser.view.NinjaToast.show(context, if (mode == "auto") "Crash reporting set to Auto" else "Crash reporting disabled")
                                         }
                                     )
-
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                     // Diagnostic Actions: Export ZIP Logs
                                     OutlinedButton(
                                         onClick = {
@@ -2923,8 +2853,6 @@ fun PetalSettingsScreen(
                                     )
 
                                     if (isSupportiveAds) {
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                                         Text(
                                             text = "Preview of Supportive Ad Banner:",
                                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
