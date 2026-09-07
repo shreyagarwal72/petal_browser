@@ -1652,42 +1652,6 @@ fun PetalSettingsScreen(
                                 }
                             }
 
-                            // 3. Private DNS & Chrome Flags
-                            if ((scaffoldCategory == SettingsCategory.PRIVACY || searchQuery.isNotBlank()) && matchesSearch("Chrome Flags", "chrome://flags petal://flags flags experimental webgpu features force dark safe browsing")) {
-                                SettingsCategoryCard(title = "Experimental Petal & Chrome Flags", iconRes = com.petal.browser.R.drawable.build_filled) {
-                                    Surface(
-                                        onClick = {
-                                            if (context is androidx.activity.ComponentActivity) {
-                                                com.petal.browser.flags.PetalChromeFlagsBridge.showFlags(context, null)
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(14.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    "Petal & Chrome Experimental Flags (petal://flags)",
-                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                                )
-                                                Text(
-                                                    "Enable or disable WebGPU, hardware acceleration, force dark mode, HTTP/3 QUIC, and experimental Web APIs",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
-                                                )
-                                            }
-                                            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                                        }
-                                    }
-                                }
-                            }
-
                             if ((scaffoldCategory == SettingsCategory.PRIVACY || searchQuery.isNotBlank()) && matchesSearch("Private DNS", "dns cleanbrowsing cloudflare 1.1.1.1 google opendns security filter")) {
                                 SettingsCategoryCard(title = "Private DNS Protection", iconRes = com.petal.browser.R.drawable.database_filled) {
                                     Text(
