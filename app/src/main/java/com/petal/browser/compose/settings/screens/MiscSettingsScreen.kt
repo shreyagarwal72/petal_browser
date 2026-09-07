@@ -34,17 +34,14 @@ fun MiscSettingsScreen(
     val autoOpenApps by viewModel.autoOpenApps.collectAsStateWithLifecycle()
     val checkUpdateOnLaunch by viewModel.checkUpdateOnLaunch.collectAsStateWithLifecycle()
     val downloadManagerMode by viewModel.downloadManagerMode.collectAsStateWithLifecycle()
-    val autoPreviewDownloadedImages by viewModel.autoPreviewDownloadedImages.collectAsStateWithLifecycle()
 
     MiscSettingsScreenContent(
         autoOpenApps = autoOpenApps,
         checkUpdateOnLaunch = checkUpdateOnLaunch,
         downloadManagerMode = downloadManagerMode,
-        autoPreviewDownloadedImages = autoPreviewDownloadedImages,
         onAutoOpenAppsChange = viewModel::setAutoOpenApps,
         onCheckUpdateOnLaunchChange = viewModel::setCheckUpdateOnLaunch,
         onDownloadManagerModeChange = viewModel::setDownloadManagerMode,
-        onAutoPreviewDownloadedImagesChange = viewModel::setAutoPreviewDownloadedImages,
         onNavigateBack = onNavigateBack,
         modifier = modifier
     )
@@ -55,11 +52,9 @@ fun MiscSettingsScreenContent(
     autoOpenApps: Boolean,
     checkUpdateOnLaunch: Boolean,
     downloadManagerMode: String,
-    autoPreviewDownloadedImages: Boolean,
     onAutoOpenAppsChange: (Boolean) -> Unit,
     onCheckUpdateOnLaunchChange: (Boolean) -> Unit,
     onDownloadManagerModeChange: (String) -> Unit,
-    onAutoPreviewDownloadedImagesChange: (Boolean) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -93,14 +88,6 @@ fun MiscSettingsScreenContent(
                         text = "Choose whether downloads are handled by Petal's high-speed in-app downloader or redirected to an external download manager.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    ToggleRow(
-                        title = "Auto-preview downloaded images",
-                        subtitle = "Show downloaded photos in the manager like Chrome",
-                        icon = Icons.Rounded.Image,
-                        checked = autoPreviewDownloadedImages,
-                        onCheckedChange = onAutoPreviewDownloadedImagesChange
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -285,6 +272,76 @@ fun MiscSettingsScreenContent(
                         checked = autoOpenApps,
                         onCheckedChange = onAutoOpenAppsChange
                     )
+                }
+
+                // Tabs & Inactive Tabs Management Card
+                var showInactiveSheet by remember { mutableStateOf(false) }
+                val sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                val thresholdPref = sp.getString(com.petal.browser.compose.tabs.PetalInactiveTabManager.PREF_INACTIVE_DAYS_THRESHOLD, "21") ?: "21"
+                val thresholdSummary = when (thresholdPref) {
+                    "never" -> "Never"
+                    "7" -> "After 7 days"
+                    "14" -> "After 14 days"
+                    "21" -> "After 21 days"
+                    else -> "After 21 days"
+                }
+
+                SettingsCategoryCard(title = "Tab Management & Inactive Tabs", icon = Icons.Rounded.TabUnselected) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showInactiveSheet = true }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Inactive Tabs & Auto-Archival",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Threshold: $thresholdSummary. Click to configure duplicate archiving and auto-closing.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (showInactiveSheet) {
+                    androidx.compose.ui.window.Dialog(
+                        onDismissRequest = { showInactiveSheet = false }
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(28.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.85f)
+                        ) {
+                            InactiveSettingsScreen(
+                                onNavigateBack = { showInactiveSheet = false }
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
