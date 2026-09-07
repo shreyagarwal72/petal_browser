@@ -167,7 +167,9 @@ import com.petal.browser.view.NinjaToast;
 import com.petal.browser.view.NinjaWebView;
 import com.petal.browser.view.AdapterRecord;
 import com.petal.browser.view.SwipeTouchListener;
+import dagger.hilt.android.AndroidEntryPoint;
 
+@AndroidEntryPoint
 public class BrowserActivity extends AppCompatActivity implements BrowserController {
 
     // Menus
@@ -547,7 +549,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackStarted(@NonNull androidx.activity.BackEventCompat backEvent) {
-                predictiveBackStartedOnOverlay = isOverlayScreenShowing && !isDecorOverlayShowing;
+                predictiveBackStartedOnOverlay = isOverlayScreenShowing && !isDecorOverlayShowing && contentFrame != null && contentFrame.getChildCount() > 0 && !(contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof NinjaWebView) && !(contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof com.petal.browser.view.PetalGeckoView);
                 if (predictiveBackStartedOnOverlay) {
                     predictiveBackSwipeEdge = backEvent.getSwipeEdge();
                     // Compose owns the overlay animation; do not also transform the Activity root.
@@ -663,43 +665,58 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        }
+
         // Chrome-style Tab Session Restoration & Rehydration
         try {
             java.util.List<com.petal.browser.unit.TabSessionManager.TabStateRecord> savedSession =
                     com.petal.browser.unit.TabSessionManager.loadSession(this);
             if (savedSession != null && !savedSession.isEmpty()) {
                 com.petal.browser.view.PetalGeckoView activeRestoredGeckoView = null;
+                int activeIndex = -1;
+                for (int i = 0; i < savedSession.size(); i++) {
+                    if (savedSession.get(i).isActive) {
+                        activeIndex = i;
+                        break;
+                    }
+                }
+                if (activeIndex < 0) activeIndex = 0;
+
                 for (int i = 0; i < savedSession.size(); i++) {
                     com.petal.browser.unit.TabSessionManager.TabStateRecord record = savedSession.get(i);
-                    boolean isForegroundTab = record.isActive || (i == 0 && BrowserContainer.size() == 0);
-                    com.petal.browser.view.PetalGeckoView restoredGeckoView =
-                            com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
-                                    this, record.title, record.url, isForegroundTab, false
-                            );
-                    if (record.persistentTabId != null && !record.persistentTabId.isEmpty()) {
-                        restoredGeckoView.setTabId(record.persistentTabId);
-                    }
-                    restoredGeckoView.setBrowserController(this);
-
-                    if (record.url != null && !record.url.isEmpty() && !isHomePage(record.url)) {
-                        restoredGeckoView.loadUrl(record.url);
-                    } else {
-                        restoredGeckoView.loadUrl("about:blank");
-                    }
-
-                    if (record.title != null && !record.title.isEmpty()) {
-                        restoredGeckoView.setAlbumTitle(record.title, record.url);
-                    }
-                    if (record.tabGroupId != null && !record.tabGroupId.isEmpty()) {
-                        restoredGeckoView.setTabGroupId(record.tabGroupId);
-                        restoredGeckoView.setTabGroupTitle(record.tabGroupTitle);
-                    }
-
-                    BrowserContainer.add(restoredGeckoView);
+                    boolean isForegroundTab = i == activeIndex;
                     if (isForegroundTab) {
+                        com.petal.browser.view.PetalGeckoView restoredGeckoView =
+                                com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
+                                        this, record.title, record.url, true, record.isIncognito
+                                );
+                        if (record.persistentTabId != null && !record.persistentTabId.isEmpty()) {
+                            restoredGeckoView.setTabId(record.persistentTabId);
+                        }
+                        restoredGeckoView.setBrowserController(this);
+                        if (record.url != null && !record.url.isEmpty() && !isHomePage(record.url)) {
+                            restoredGeckoView.loadUrl(record.url);
+                        } else {
+                            restoredGeckoView.loadUrl("about:blank");
+                        }
+                        if (record.title != null && !record.title.isEmpty()) {
+                            restoredGeckoView.setAlbumTitle(record.title, record.url);
+                        }
+                        if (record.tabGroupId != null && !record.tabGroupId.isEmpty()) {
+                            restoredGeckoView.setTabGroupId(record.tabGroupId);
+                            restoredGeckoView.setTabGroupTitle(record.tabGroupTitle);
+                        }
+                        BrowserContainer.add(restoredGeckoView);
                         activeRestoredGeckoView = restoredGeckoView;
                     } else {
-                        restoredGeckoView.deactivate();
+                        com.petal.browser.browser.PlaceholderAlbumController placeholder =
+                                new com.petal.browser.browser.PlaceholderAlbumController(
+                                        this, record.title, record.url, null, record.persistentTabId,
+                                        record.tabGroupId, record.tabGroupTitle, record.isIncognito
+                                );
+                        BrowserContainer.add(placeholder);
                     }
                 }
                 if (activeRestoredGeckoView != null) {
@@ -929,6 +946,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
      * nav / predictive back) below, so both routes behave identically.
      */
     public void performBackNavigation() {
+        if (isOverlayScreenShowing && contentFrame != null && contentFrame.getChildCount() > 0 && (contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof NinjaWebView || contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof com.petal.browser.view.PetalGeckoView)) {
+            isOverlayScreenShowing = false;
+            pendingOverlayBackAction = null;
+        }
         if (currentAlbumController instanceof NinjaWebView) {
             ninjaWebView = (NinjaWebView) currentAlbumController;
         }
@@ -1355,7 +1376,41 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
         }
         if (controller == null) return;
-        View av = (View) controller;
+
+        // Saved background tabs are lightweight placeholders. Materialize exactly
+        // the selected slot when it is first shown, preserving its position/ID.
+        if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+            com.petal.browser.browser.PlaceholderAlbumController placeholder =
+                    (com.petal.browser.browser.PlaceholderAlbumController) controller;
+            int slot = BrowserContainer.indexOf(controller);
+            if (slot < 0) return;
+            String savedTitle = placeholder.getTitle();
+            String savedUrl = placeholder.getUrl();
+            String targetUrl = overrideUrl != null ? overrideUrl : savedUrl;
+            com.petal.browser.view.PetalGeckoView materialized =
+                    com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
+                            this, savedTitle, savedUrl, true, placeholder.isIncognito());
+            if (placeholder.getTabId() != null && !placeholder.getTabId().isEmpty()) {
+                materialized.setTabId(placeholder.getTabId());
+            }
+            materialized.setBrowserController(this);
+            if (savedTitle != null && !savedTitle.isEmpty()) {
+                materialized.setAlbumTitle(savedTitle, savedUrl);
+            }
+            if (placeholder.getTabGroupId() != null && !placeholder.getTabGroupId().isEmpty()) {
+                materialized.setTabGroupId(placeholder.getTabGroupId());
+                materialized.setTabGroupTitle(placeholder.getTabGroupTitle());
+            }
+            BrowserContainer.replace(slot, materialized);
+            controller = materialized;
+            if (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl)) {
+                materialized.loadUrl(targetUrl);
+            } else {
+                materialized.loadUrl("about:blank");
+            }
+        }
+
+        View av = controller.getAlbumView();
         if (currentAlbumController != null) {
             if (currentAlbumController instanceof NinjaWebView) {
                 ((NinjaWebView) currentAlbumController).updatePreviewCache();
