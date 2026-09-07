@@ -728,7 +728,9 @@ class PetalGeckoView @JvmOverloads constructor(
     // AlbumController Implementation
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun getAlbumView(): View = album.albumView
+    override fun getAlbumView(): View = this
+
+    fun getTabView(): View = album.albumView
 
     override fun activate() {
         requestFocus()
