@@ -379,16 +379,6 @@ private fun ExtensionRow(
                 icon = Icons.Rounded.Check,
                 onCheckedChange = onToggleEnabled
             )
-            // Popup launch button — only visible for enabled extensions
-            if (extension.enabled) {
-                IconButton(onClick = onOpenPopup) {
-                    Icon(
-                        Icons.Rounded.PlayArrow,
-                        contentDescription = "Open popup",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
@@ -579,8 +569,8 @@ private fun ExtensionDetailSheet(
                 Spacer(Modifier.height(12.dp))
                 Text(extension.description, style = MaterialTheme.typography.bodyMedium)
             }
-            // "Open extension" button — only shown when extension is enabled
-            if (extension.enabled) {
+            // Only extensions that actually declare a popup expose the action.
+            if (extension.enabled && extension.supportsPopup) {
                 Spacer(Modifier.height(16.dp))
                 FilledTonalButton(
                     onClick = {
@@ -758,7 +748,6 @@ private fun ExtensionPopupDialog(
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
                             setSession(popup.session)
-                            popup.session.setActive(true)
                         }
                     },
                     onRelease = { view -> view.releaseSession() }

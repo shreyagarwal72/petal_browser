@@ -72,7 +72,7 @@ class PetalGeckoView @JvmOverloads constructor(
 
         @JvmStatic
         fun getDerivedDesktopUserAgent(context: Context): String {
-            return "Mozilla/5.0 (X11; Linux x86_64; rv:155.0) Gecko/20100101 Firefox/155.0"
+            return "Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0"
         }
     }
 
@@ -150,6 +150,9 @@ class PetalGeckoView @JvmOverloads constructor(
             session.open(runtime)
         }
         geckoView.setSession(session)
+        // GeckoView owns the actual content surface. Clear its exclusion rects after
+        // every session attachment so Android's edge back gesture remains available.
+        resetGestureExclusionRects()
 
         // Progress & Loading Delegate
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
@@ -171,6 +174,7 @@ class PetalGeckoView @JvmOverloads constructor(
                 val act = getHostActivity()
                 if (act is com.petal.browser.activity.BrowserActivity) {
                     act.runOnUiThread {
+                        resetGestureExclusionRects()
                         act.updateOmniBox()
                         act.updateAddressBar()
                         act.updatePersistentBottomNav()
@@ -227,6 +231,33 @@ class PetalGeckoView @JvmOverloads constructor(
 
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
                 canGoForwardVal = canGoForward
+            }
+
+            // onPageStart only fires with the URL that was originally requested. If the
+            // server responds with a redirect, or the page later calls history.pushState/
+            // replaceState (every SPA route change - Google included), the actual displayed
+            // location moves on but onPageStart never fires again, so currentUrl (and the
+            // address bar bound to it) was left showing the stale, pre-redirect/pre-navigation
+            // URL indefinitely. onLocationChange is GeckoView's dedicated callback for exactly
+            // this - it fires whenever the visible top-level location changes, redirect or not.
+            override fun onLocationChange(
+                session: GeckoSession,
+                url: String?,
+                perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
+                hasUserGesture: Boolean
+            ) {
+                if (url.isNullOrBlank() || url.equals(currentUrl, ignoreCase = true)) return
+                currentUrl = url
+                album.setAlbumTitle(currentTitle, url)
+                val act = getHostActivity()
+                if (act is com.petal.browser.activity.BrowserActivity) {
+                    act.runOnUiThread {
+                        resetGestureExclusionRects()
+                        act.updateOmniBox()
+                        act.updateAddressBar()
+                        act.updatePersistentBottomNav()
+                    }
+                }
             }
 
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<AllowOrDeny>? {
@@ -339,12 +370,29 @@ class PetalGeckoView @JvmOverloads constructor(
                     }
                     return
                 }
-                val fileName = HelperUnit.resolveFileName(responseUrl, null, null)
+                // GeckoView's WebResponse carries the server's real Content-Disposition and
+                // Content-Type headers - previously these were discarded (passed as null),
+                // so every download fell back to guessing a name purely from the URL path.
+                // For signed CDN links, dynamic endpoints, or any URL without a clean
+                // "name.ext" tail, that guess had nothing to go on and produced a wrong
+                // name and/or wrong extension. Reading the real headers here fixes that
+                // for every download that goes through the GeckoView engine.
+                val headers = response.headers
+                val contentDisposition = headers?.entries?.firstOrNull {
+                    it.key.equals("Content-Disposition", ignoreCase = true)
+                }?.value
+                val mimeType = headers?.entries?.firstOrNull {
+                    it.key.equals("Content-Type", ignoreCase = true)
+                }?.value
+                val fileName = HelperUnit.resolveFileName(responseUrl, contentDisposition, mimeType)
+                val contentLength = headers?.entries?.firstOrNull {
+                    it.key.equals("Content-Length", ignoreCase = true)
+                }?.value?.toLongOrNull() ?: 0L
                 act.runOnUiThread {
                     com.petal.browser.ui.components.PetalDownloadDialogBridge.showDownloadConfirmation(
-                        act, responseUrl, null, null, 0L
+                        act, responseUrl, contentDisposition, mimeType, contentLength
                     ) { confirmedName ->
-                        BrowserUnit.download(act, responseUrl, confirmedName.ifBlank { fileName }, null)
+                        BrowserUnit.download(act, responseUrl, confirmedName.ifBlank { fileName }, mimeType)
                     }
                 }
             }
@@ -439,6 +487,24 @@ class PetalGeckoView @JvmOverloads constructor(
                     builder.show()
                 }
                 return result
+            }
+
+            // Autofill is disabled at the runtime level (loginAutofillEnabled = false),
+            // but these are overridden defensively so Gecko never falls through to the
+            // default interface behavior if autofill is re-enabled later without this
+            // being revisited. Dismissing immediately is safe and crash-free.
+            override fun onLoginSave(
+                session: GeckoSession,
+                request: GeckoSession.PromptDelegate.AutocompleteRequest<org.mozilla.geckoview.Autocomplete.LoginSaveOption>
+            ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
+                return GeckoResult.fromValue(request.dismiss())
+            }
+
+            override fun onLoginSelect(
+                session: GeckoSession,
+                request: GeckoSession.PromptDelegate.AutocompleteRequest<org.mozilla.geckoview.Autocomplete.LoginSelectOption>
+            ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
+                return GeckoResult.fromValue(request.dismiss())
             }
         }
 
@@ -577,24 +643,42 @@ class PetalGeckoView @JvmOverloads constructor(
     }
 
     fun applySettings() {
-        val desktopEnabled = sp.getBoolean("sp_desktop_site", false)
-        session.settings.userAgentMode = if (desktopEnabled) {
-            GeckoSessionSettings.USER_AGENT_MODE_DESKTOP
-        } else {
-            GeckoSessionSettings.USER_AGENT_MODE_MOBILE
-        }
+        val profile = getProfile(context)
+        // BrowserNavigationDelegate's "Desktop site" toggle saves under "${profile}_desktop"
+        // (e.g. "profileStandard_desktop") - this used to read the unrelated, never-written
+        // "sp_desktop_site" key instead, so the toggle reverted to mobile on the very next
+        // navigation, new tab, or session restore. "sp_desktop_site" is kept as a fallback
+        // only for anyone who had it set from an older build.
+        val desktopEnabled = sp.getBoolean("${profile}_desktop", sp.getBoolean("sp_desktop_site", false))
+        applyDesktopMode(desktopEnabled)
         session.settings.useTrackingProtection = true
         val enableJs = sp.getBoolean("sp_javascript", true)
         session.settings.allowJavascript = enableJs
     }
 
     fun setDesktopMode(enabled: Boolean) {
+        applyDesktopMode(enabled)
+        session.reload()
+    }
+
+    /**
+     * GeckoView decoupled the desktop viewport from userAgentMode: setting USER_AGENT_MODE_DESKTOP
+     * alone no longer gives the page a desktop-width layout, it only changes the UA string. Without
+     * also setting viewportMode, sites saw a desktop User-Agent but Gecko still laid the page out
+     * in the narrow mobile viewport - pages reported themselves as "desktop" yet still rendered
+     * zoomed-in/broken as if on a phone. Both must be set together for "Desktop site" to work.
+     */
+    private fun applyDesktopMode(enabled: Boolean) {
         session.settings.userAgentMode = if (enabled) {
             GeckoSessionSettings.USER_AGENT_MODE_DESKTOP
         } else {
             GeckoSessionSettings.USER_AGENT_MODE_MOBILE
         }
-        session.reload()
+        session.settings.viewportMode = if (enabled) {
+            GeckoSessionSettings.VIEWPORT_MODE_DESKTOP
+        } else {
+            GeckoSessionSettings.VIEWPORT_MODE_MOBILE
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -977,10 +1061,26 @@ class PetalGeckoView @JvmOverloads constructor(
 
     fun pauseTimers() {}
 
+    /**
+     * Keep both the wrapper and GeckoView's actual rendering child out of Android's
+     * system-gesture exclusion regions. GeckoView can recreate/update its child view
+     * during navigation, so clearing only the wrapper is not sufficient for Android 13+
+     * predictive-back gestures.
+     */
     fun resetGestureExclusionRects() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 systemGestureExclusionRects = java.util.Collections.emptyList()
+            } catch (ignored: Exception) {}
+            try {
+                geckoView.systemGestureExclusionRects = java.util.Collections.emptyList()
+            } catch (ignored: Exception) {}
+            try {
+                geckoView.post {
+                    try {
+                        geckoView.systemGestureExclusionRects = java.util.Collections.emptyList()
+                    } catch (ignored: Exception) {}
+                }
             } catch (ignored: Exception) {}
         }
     }
@@ -990,6 +1090,7 @@ class PetalGeckoView @JvmOverloads constructor(
             try {
                 super.setSystemGestureExclusionRects(java.util.Collections.emptyList())
             } catch (ignored: Exception) {}
+            resetGestureExclusionRects()
         }
     }
 
