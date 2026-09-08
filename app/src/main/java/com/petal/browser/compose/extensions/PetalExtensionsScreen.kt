@@ -215,6 +215,25 @@ fun PetalExtensionsScreen(
                 onUninstall = {
                     PetalExtensionManager.uninstall(ext.raw)
                     detailExtensionId = null
+                },
+                onOpenLink = { linkTitle, url ->
+                    // Opening a link (extension settings / AMO listing) needs to fully leave
+                    // the Extensions screen, not just close this bottom sheet - the Extensions
+                    // screen is a full-screen overlay presented on top of the browser content
+                    // (see BrowserActivity#presentComposeScreen), so if only the sheet is
+                    // dismissed here, the newly-opened tab loads invisibly behind it and it
+                    // looks like tapping the link did nothing. Close the sheet, close the
+                    // whole overlay (onDismiss == onBackPress from the caller), then navigate.
+                    detailExtensionId = null
+                    onDismiss()
+                    val activity = context as? com.petal.browser.activity.BrowserActivity
+                    if (activity != null) {
+                        activity.addAlbum(linkTitle, url, true)
+                    } else {
+                        try {
+                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                        } catch (ignored: Exception) {}
+                    }
                 }
             )
         } else {
@@ -486,7 +505,9 @@ private fun AddExtensionSheet(
             text = { Text("Browse Mozilla Android add-ons, then paste an add-on page or download link here to install it.") },
             confirmButton = { TextButton(onClick = {
                 showMozillaCatalogPrompt = false
-                (context as? com.petal.browser.activity.BrowserActivity)?.addAlbum("Firefox Add-ons", PetalExtensionManager.amoAndroidBrowseUrl, false)
+                // foreground=true - otherwise this silently opens a background tab while the
+                // Extensions overlay stays on screen, which looks like the button did nothing.
+                (context as? com.petal.browser.activity.BrowserActivity)?.addAlbum("Firefox Add-ons", PetalExtensionManager.amoAndroidBrowseUrl, true)
             }) { Text("Open Mozilla Add-ons") } },
             dismissButton = { TextButton(onClick = { showMozillaCatalogPrompt = false }) { Text("Cancel") } }
         )
@@ -500,7 +521,8 @@ private fun ExtensionDetailSheet(
     extension: PetalExtensionManager.InstalledExtension,
     onDismiss: () -> Unit,
     onTogglePrivate: (Boolean) -> Unit,
-    onUninstall: () -> Unit
+    onUninstall: () -> Unit,
+    onOpenLink: (title: String, url: String) -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
@@ -518,10 +540,10 @@ private fun ExtensionDetailSheet(
             DetailRow(icon = Icons.Rounded.VisibilityOff, title = "Allow in Private tabs", checked = extension.allowedInPrivateBrowsing, onCheckedChange = onTogglePrivate)
             Spacer(Modifier.height(8.dp))
             extension.amoListingUrl?.let { url ->
-                DetailLinkRow(icon = Icons.Rounded.OpenInNew, title = "View on addons.mozilla.org", url = url)
+                DetailLinkRow(icon = Icons.Rounded.OpenInNew, title = "View on addons.mozilla.org", url = url, onOpenLink = onOpenLink)
             }
             extension.optionsPageUrl?.let { url ->
-                DetailLinkRow(icon = Icons.Rounded.Settings, title = "Extension settings", url = url)
+                DetailLinkRow(icon = Icons.Rounded.Settings, title = "Extension settings", url = url, onOpenLink = onOpenLink)
             }
             Spacer(Modifier.height(16.dp))
             OutlinedButton(
@@ -552,16 +574,16 @@ private fun DetailRow(icon: ImageVector, title: String, checked: Boolean, onChec
 }
 
 @Composable
-private fun DetailLinkRow(icon: ImageVector, title: String, url: String) {
-    val context = LocalContext.current
+private fun DetailLinkRow(icon: ImageVector, title: String, url: String, onOpenLink: (title: String, url: String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                try {
-                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                } catch (ignored: Exception) {}
-            }
+            // An extension's options page is a moz-extension://<id>/... URL - only GeckoView
+            // understands that scheme, so it must be opened as a normal Petal (Gecko) tab
+            // rather than a system ACTION_VIEW intent. onOpenLink additionally closes the
+            // Extensions screen's own full-screen overlay before navigating - otherwise the
+            // overlay stays on top of the newly-opened tab and the tap looks like a no-op.
+            .clickable { onOpenLink(title, url) }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
