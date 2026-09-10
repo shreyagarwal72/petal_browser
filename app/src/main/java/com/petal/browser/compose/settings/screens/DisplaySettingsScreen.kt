@@ -203,7 +203,7 @@ fun DisplaySettingsScreenContent(
                     // Text Font Scale Slider & Live Box
                     Surface(
                         shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -237,7 +237,7 @@ fun DisplaySettingsScreenContent(
                             Spacer(Modifier.height(12.dp))
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
@@ -261,7 +261,7 @@ fun DisplaySettingsScreenContent(
                     // Default Page Zoom Slider & Live Box
                     Surface(
                         shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -295,7 +295,7 @@ fun DisplaySettingsScreenContent(
                             Spacer(Modifier.height(12.dp))
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {

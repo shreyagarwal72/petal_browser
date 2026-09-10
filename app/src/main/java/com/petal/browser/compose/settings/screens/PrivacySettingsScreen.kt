@@ -362,8 +362,8 @@ fun PrivacySettingsScreenContent(
                         Surface(
                             onClick = { onPrivateDnsModeChange(mode) },
                             shape = RoundedCornerShape(16.dp),
-                            color = if (privateDnsMode == mode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                            border = if (privateDnsMode == mode) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
+                            color = if (privateDnsMode == mode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = if (privateDnsMode == mode) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -380,7 +380,7 @@ fun PrivacySettingsScreenContent(
                                     Text(
                                         text = desc,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (privateDnsMode == mode) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (privateDnsMode == mode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 if (privateDnsMode == mode) {

@@ -117,10 +117,10 @@ fun MiscSettingsScreenContent(
                     val isInApp = downloadManagerMode == ExternalDownloadManagerHelper.MODE_IN_APP
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isInApp) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                        color = if (isInApp) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                         border = androidx.compose.foundation.BorderStroke(
                             width = if (isInApp) 2.dp else 1.dp,
-                            color = if (isInApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            color = if (isInApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -150,13 +150,13 @@ fun MiscSettingsScreenContent(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "In-App Downloader (Default)",
+                                    text = "In-App Downloader (Fast, Multi-Threaded)",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Built-in parallel multi-threaded chunked downloader with real-time Live Alert notifications",
+                                    text = "Native Petal accelerated downloader with background notifications",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -174,10 +174,10 @@ fun MiscSettingsScreenContent(
                         val isSelected = downloadManagerMode.equals(downloader.key, ignoreCase = true)
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -231,10 +231,10 @@ fun MiscSettingsScreenContent(
                     val isExternalAuto = downloadManagerMode == ExternalDownloadManagerHelper.MODE_EXTERNAL_AUTO
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isExternalAuto) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainer,
+                        color = if (isExternalAuto) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                         border = androidx.compose.foundation.BorderStroke(
                             width = if (isExternalAuto) 2.dp else 1.dp,
-                            color = if (isExternalAuto) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            color = if (isExternalAuto) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier
                             .fillMaxWidth()

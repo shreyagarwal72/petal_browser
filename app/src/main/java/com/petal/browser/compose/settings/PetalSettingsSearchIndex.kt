@@ -93,13 +93,6 @@ object PetalSettingsSearchIndex {
             keywords = listOf("material you", "dynamic color", "monet", "wallpaper colors", "system accent", "colors")
         ),
         SettingsSearchItem(
-            id = "appearance_expressive_colors",
-            title = "Material 3 Expressive Colors",
-            subtitle = "Rich expressive tonal elevations and dynamic vibrancy styling",
-            category = SettingsCategory.APPEARANCE,
-            keywords = listOf("expressive", "expressive colors", "vibrancy", "tonal", "m3 expressive", "color scheme")
-        ),
-        SettingsSearchItem(
             id = "appearance_fonts",
             title = "App Typography & Custom Fonts",
             subtitle = "Select built-in fonts (Petal, Product Sans, Roboto, Inter, Outfit, Open Sans, Space Grotesk) or import custom TTF/OTF",
