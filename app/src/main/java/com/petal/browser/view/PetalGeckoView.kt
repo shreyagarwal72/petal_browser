@@ -114,29 +114,12 @@ class PetalGeckoView @JvmOverloads constructor(
     private var lastCrashRecoveryTime: Long = 0L
     private var crashRecoveryCount: Int = 0
 
-    val loadingProgressBar = com.google.android.material.progressindicator.LinearProgressIndicator(context).apply {
-        isIndeterminate = false
-        max = 100
-        progress = 0
-        trackThickness = (3 * resources.displayMetrics.density).toInt()
-        val typedValue = android.util.TypedValue()
-        if (context.theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true) ||
-            context.theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
-            setIndicatorColor(typedValue.data)
-        }
-        visibility = View.GONE
-    }
-
     init {
         isNestedScrollingEnabled = true
         addView(
             geckoView,
             LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
-        val progressParams = LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            gravity = android.view.Gravity.TOP
-        }
-        addView(loadingProgressBar, progressParams)
         initGeckoSession()
         album.setBrowserController(globalBrowserController)
     }
@@ -150,9 +133,8 @@ class PetalGeckoView @JvmOverloads constructor(
             session.open(runtime)
         }
         geckoView.setSession(session)
-        // GeckoView owns the actual content surface. Clear its exclusion rects after
-        // every session attachment so Android's edge back gesture remains available.
-        resetGestureExclusionRects()
+        // Do not mutate GeckoView's compositor child hierarchy during session attachment.
+        // Edge-gesture handling is performed lazily from dispatchTouchEvent().
 
         // Progress & Loading Delegate
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
@@ -174,7 +156,9 @@ class PetalGeckoView @JvmOverloads constructor(
                 val act = getHostActivity()
                 if (act is com.petal.browser.activity.BrowserActivity) {
                     act.runOnUiThread {
-                        resetGestureExclusionRects()
+                        // Do not touch GeckoView's compositor child hierarchy during
+                        // navigation. Login/OAuth redirects can recreate that hierarchy
+                        // concurrently and walking it here can trigger a native crash.
                         act.updateOmniBox()
                         act.updateAddressBar()
                         act.updatePersistentBottomNav()
@@ -252,7 +236,8 @@ class PetalGeckoView @JvmOverloads constructor(
                 val act = getHostActivity()
                 if (act is com.petal.browser.activity.BrowserActivity) {
                     act.runOnUiThread {
-                        resetGestureExclusionRects()
+                        // Location changes include login/OAuth redirects. Keep this callback
+                        // UI-only; Gecko owns its compositor child lifecycle.
                         act.updateOmniBox()
                         act.updateAddressBar()
                         act.updatePersistentBottomNav()
@@ -420,16 +405,13 @@ class PetalGeckoView @JvmOverloads constructor(
                 }
             }
             override fun onKill(session: GeckoSession) {
-                // Same recovery as onCrash: the OS/Gecko killed the content process
-                // (e.g. under memory pressure), leaving the session closed and unusable.
-                android.util.Log.w(TAG, "GeckoSession content process killed for $currentUrl - reopening session")
-                com.petal.browser.logger.PetalAppLogger.e(TAG, "GeckoSession content process killed for $currentUrl")
-                com.petal.browser.logger.PetalAppLogger.recordProcessCrash(
-                    context,
-                    TAG,
-                    "GeckoView Content Process Killed (OS OOM / Low Memory Kill)",
-                    "Active URL: $currentUrl | Title: $currentTitle"
-                )
+                // The OS/Gecko killed the content process (almost always a routine low-memory
+                // kill under system memory pressure, not an actual app fault). The session is
+                // reopened transparently below, so this is intentionally NOT reported as a
+                // crash - recordProcessCrash() is deliberately not called here so it can no
+                // longer trigger the crash-reporting dialog on next launch. A plain debug log
+                // line is kept for local troubleshooting only.
+                android.util.Log.w(TAG, "GeckoSession content process killed for $currentUrl (low memory) - reopening session")
                 recoverCrashedSession()
             }
 
@@ -658,9 +640,20 @@ class PetalGeckoView @JvmOverloads constructor(
      */
     @MainThread
     fun adoptPopupSession(popupSession: GeckoSession) {
-        // Close and discard the session that initGeckoSession created automatically.
-        if (session.isOpen && session !== popupSession) {
-            session.close()
+        // Detach the automatically-created session from GeckoView before closing it.
+        // Closing an attached session while an OAuth/login popup is being adopted can
+        // race Gecko's compositor teardown and crash the native content process.
+        if (session !== popupSession) {
+            try {
+                geckoView.releaseSession()
+            } catch (_: Throwable) {
+                // Older GeckoView builds may already have released the view.
+            }
+            try {
+                if (session.isOpen) session.close()
+            } catch (_: Throwable) {
+                // The session may have completed teardown between the checks.
+            }
         }
         session = popupSession
         // Re-init all delegates on the adopted session without calling open() again.
@@ -668,15 +661,9 @@ class PetalGeckoView @JvmOverloads constructor(
     }
 
     private fun updateProgress(progress: Int) {
-        post {
-            if (progress >= 100 || progress == BrowserUnit.LOADING_STOPPED || isStopped) {
-                loadingProgressBar.visibility = View.GONE
-                loadingProgressBar.progress = 0
-            } else {
-                loadingProgressBar.visibility = View.VISIBLE
-                loadingProgressBar.setProgressCompat(progress, true)
-            }
-        }
+        // GeckoView uses the same shared browser loading surface as WebView.
+        // BrowserActivity renders it with the exact Material 3 Expressive
+        // LinearWavyProgressIndicator used by Essentials' App Updater.
         if (isForegroundTab && globalBrowserController != null) {
             val p = if (!isStopped) progress else BrowserUnit.LOADING_STOPPED
             globalBrowserController?.updateProgress(p)
@@ -1148,11 +1135,21 @@ class PetalGeckoView @JvmOverloads constructor(
         }
     }
 
-    /** GeckoView can recreate nested rendering children after first paint. */
+    /**
+     * GeckoView can recreate nested rendering children after first paint, and it does so
+     * from its own native compositor callbacks - not guaranteed to be serialized with this
+     * walk in a way that keeps the child list stable mid-iteration. Snapshotting childCount
+     * once and re-checking bounds on every access (instead of trusting a live index into a
+     * tree that may shrink/mutate underneath us) avoids touching a child GeckoView has
+     * already started tearing down, which previously caused a native SIGSEGV in libxul.so
+     * when this ran during a page navigation (e.g. right after a login form redirect).
+     */
     private fun clearChildGestureExclusionRects(view: View) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || view !is ViewGroup) return
-        for (index in 0 until view.childCount) {
-            val child = view.getChildAt(index) ?: continue
+        val snapshotCount = view.childCount
+        for (index in 0 until snapshotCount) {
+            if (index >= view.childCount) break
+            val child = try { view.getChildAt(index) } catch (_: Exception) { null } ?: continue
             try {
                 child.systemGestureExclusionRects = java.util.Collections.emptyList()
             } catch (_: Exception) {}
@@ -1165,17 +1162,19 @@ class PetalGeckoView @JvmOverloads constructor(
             try {
                 super.setSystemGestureExclusionRects(java.util.Collections.emptyList())
             } catch (ignored: Exception) {}
-            resetGestureExclusionRects()
         }
     }
 
+    /**
+     * Only ACTION_DOWN near the left/right screen edge can be the start of a predictive-back
+     * swipe, so that's the only case that needs exclusion rects cleared. Previously this ran
+     * on every DOWN/UP/CANCEL anywhere on screen - including a normal tap on a login button -
+     * which walked GeckoView's live rendering child tree on every such tap. That coincided with
+     * Gecko recreating its own compositor child view during the post-login page navigation,
+     * which is what caused the native crash. Restricting this to edge-swipe starts removes
+     * that walk from the ordinary tap/login path entirely.
+     */
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val action = ev.actionMasked
-            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-                resetGestureExclusionRects()
-            }
-        }
         return super.dispatchTouchEvent(ev)
     }
 

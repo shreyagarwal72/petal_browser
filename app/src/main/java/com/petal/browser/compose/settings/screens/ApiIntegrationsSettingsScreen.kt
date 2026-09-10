@@ -30,6 +30,7 @@ import com.petal.browser.ui.components.ScrollFadeRow
 fun ApiIntegrationsSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    targetHighlightItemId: String? = null,
     viewModel: SearchHomeSettingsViewModel = hiltViewModel()
 ) {
     val enableLiveSuggestions by viewModel.enableLiveSuggestions.collectAsStateWithLifecycle()
@@ -38,6 +39,7 @@ fun ApiIntegrationsSettingsScreen(
         enableLiveSuggestions = enableLiveSuggestions,
         onEnableLiveSuggestionsChange = viewModel::setEnableLiveSuggestions,
         onNavigateBack = onNavigateBack,
+        targetHighlightItemId = targetHighlightItemId,
         modifier = modifier
     )
 }
@@ -47,6 +49,7 @@ fun ApiIntegrationsSettingsScreenContent(
     enableLiveSuggestions: Boolean,
     onEnableLiveSuggestionsChange: (Boolean) -> Unit,
     onNavigateBack: () -> Unit,
+    targetHighlightItemId: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -81,7 +84,12 @@ fun ApiIntegrationsSettingsScreenContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Dedicated Petal AI & API Keys Hub Card
-                SettingsCategoryCard(title = "Petal AI & API Keys Hub", iconRes = com.petal.browser.R.drawable.ic_ai_stars) {
+                SettingsCategoryCard(
+                    title = "Petal AI & API Keys Hub",
+                    iconRes = com.petal.browser.R.drawable.ic_ai_stars,
+                    cardId = "ai",
+                    targetHighlightId = targetHighlightItemId
+                ) {
                     Text(
                         "Configure AI providers, API keys, and model selections for Petal Deep Research, AI Search, and page summarizer.",
                         style = MaterialTheme.typography.bodySmall,

@@ -279,87 +279,120 @@ public class NinjaWebView extends NestedScrollWebView implements AlbumController
             }
             if (activity instanceof com.petal.browser.activity.BrowserActivity) {
                 com.petal.browser.activity.BrowserActivity browserActivity = (com.petal.browser.activity.BrowserActivity) activity;
-                if (type == HitTestResult.SRC_ANCHOR_TYPE) {
-                    final String urlResult = result.getExtra();
-                    if (urlResult != null && !urlResult.isEmpty()) {
-                        v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                        com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, urlResult);
-                        return true;
-                    }
-                }
 
-                if (type == HitTestResult.IMAGE_TYPE || type == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
-                    final String imageURL = result.getExtra();
-                    // First check if the clicked image is inside an anchor link (favicon/icon inside link)
-                    evaluateJavascript(
-                        "(function() {" +
-                        "   var el = document.elementFromPoint(window.lastTouchX || 0, window.lastTouchY || 0);" +
-                        "   if (!el) el = document.activeElement;" +
-                        "   if (!el) return '';" +
-                        "   var a = el.closest('a');" +
-                        "   if (a && a.href) return 'LINK:' + a.href;" +
-                        "   return '';" +
-                        "})();",
-                        linkCheckResult -> {
-                            if (linkCheckResult != null && !linkCheckResult.equals("null") && !linkCheckResult.isEmpty()) {
-                                String cleanLink = linkCheckResult.replace("\"", "").trim();
-                                if (cleanLink.startsWith("LINK:")) {
-                                    String targetHref = cleanLink.substring(5).trim();
-                                    if (!targetHref.isEmpty()) {
+                // Check for an active text selection first - matches GeckoView's
+                // selectionActionDelegate, where a long-press on selected text always
+                // surfaces text actions instead of falling through to link/image logic.
+                // Everything else runs only inside the "no selection" branch below, so
+                // only one context menu can ever be triggered per long-press.
+                evaluateJavascript(
+                    "(function(){ var s = window.getSelection(); return s ? s.toString() : ''; })();",
+                    selectionResult -> {
+                        String cleanSelection = "";
+                        if (selectionResult != null && selectionResult.length() > 2 && !selectionResult.equals("null")) {
+                            cleanSelection = selectionResult.substring(1, selectionResult.length() - 1)
+                                    .replace("\\\"", "\"").trim();
+                        }
+
+                        if (!cleanSelection.isEmpty()) {
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                            com.petal.browser.compose.menu.BrowserContextMenuManager.showSelectionContextMenu(browserActivity, cleanSelection);
+                            return;
+                        }
+
+                        if (type == HitTestResult.SRC_ANCHOR_TYPE) {
+                            final String urlResult = result.getExtra();
+                            if (urlResult != null && !urlResult.isEmpty()) {
+                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, urlResult);
+                                return;
+                            }
+                        }
+
+                        if (type == HitTestResult.IMAGE_TYPE || type == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                            final String imageURL = result.getExtra();
+                            // First check if the clicked image is inside an anchor link (favicon/icon inside link)
+                            evaluateJavascript(
+                                "(function() {" +
+                                "   var el = document.elementFromPoint(window.lastTouchX || 0, window.lastTouchY || 0);" +
+                                "   if (!el) el = document.activeElement;" +
+                                "   if (!el) return '';" +
+                                "   var a = el.closest('a');" +
+                                "   if (a && a.href) return 'LINK:' + a.href;" +
+                                "   return '';" +
+                                "})();",
+                                linkCheckResult -> {
+                                    if (linkCheckResult != null && !linkCheckResult.equals("null") && !linkCheckResult.isEmpty()) {
+                                        String cleanLink = linkCheckResult.replace("\"", "").trim();
+                                        if (cleanLink.startsWith("LINK:")) {
+                                            String targetHref = cleanLink.substring(5).trim();
+                                            if (!targetHref.isEmpty()) {
+                                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                                com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, targetHref);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    if (imageURL != null && !imageURL.isEmpty()) {
                                         v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                                        com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, targetHref);
-                                        return;
+                                        com.petal.browser.compose.menu.BrowserContextMenuManager.showImageContextMenu(browserActivity, imageURL);
+                                    }
+                                }
+                            );
+                            return;
+                        }
+
+                        // If HitTestResult is UNKNOWN_TYPE or another element, check if long-press
+                        // landed on an anchor link / image / video / audio element in the DOM
+                        evaluateJavascript(
+                            "(function() {" +
+                            "   var el = document.elementFromPoint(window.lastTouchX || 0, window.lastTouchY || 0);" +
+                            "   if (!el) el = document.activeElement;" +
+                            "   if (!el) return '';" +
+                            "   var a = el.closest('a');" +
+                            "   if (a && a.href) return 'LINK:' + a.href;" +
+                            "   var img = (el.tagName === 'IMG') ? el : el.querySelector('img');" +
+                            "   if (img && img.src) return 'IMG:' + img.src;" +
+                            "   var v = (el.tagName === 'VIDEO') ? el : (el.querySelector('video') || el.closest('video'));" +
+                            "   if (v && (v.currentSrc || v.src)) return 'VIDEO:' + (v.currentSrc || v.src);" +
+                            "   var au = (el.tagName === 'AUDIO') ? el : (el.querySelector('audio') || el.closest('audio'));" +
+                            "   if (au && (au.currentSrc || au.src)) return 'AUDIO:' + (au.currentSrc || au.src);" +
+                            "   return '';" +
+                            "})();",
+                            evalResult -> {
+                                if (evalResult != null && !evalResult.equals("null") && !evalResult.isEmpty()) {
+                                    String clean = evalResult.replace("\"", "").trim();
+                                    if (clean.startsWith("LINK:")) {
+                                        String linkUrl = clean.substring(5).trim();
+                                        if (!linkUrl.isEmpty()) {
+                                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                            com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, linkUrl);
+                                        }
+                                    } else if (clean.startsWith("IMG:")) {
+                                        String imgUrl = clean.substring(4).trim();
+                                        if (!imgUrl.isEmpty()) {
+                                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                            com.petal.browser.compose.menu.BrowserContextMenuManager.showImageContextMenu(browserActivity, imgUrl);
+                                        }
+                                    } else if (clean.startsWith("VIDEO:")) {
+                                        String videoUrl = clean.substring(6).trim();
+                                        if (!videoUrl.isEmpty()) {
+                                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                            com.petal.browser.compose.menu.BrowserContextMenuManager.showVideoContextMenu(browserActivity, videoUrl);
+                                        }
+                                    } else if (clean.startsWith("AUDIO:")) {
+                                        String audioUrl = clean.substring(6).trim();
+                                        if (!audioUrl.isEmpty()) {
+                                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                            com.petal.browser.compose.menu.BrowserContextMenuManager.showAudioContextMenu(browserActivity, audioUrl);
+                                        }
                                     }
                                 }
                             }
-                            if (imageURL != null && !imageURL.isEmpty()) {
-                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                                com.petal.browser.compose.menu.BrowserContextMenuManager.showImageContextMenu(browserActivity, imageURL);
-                            }
-                        }
-                    );
-                    return true;
-                }
-
-                // If HitTestResult is UNKNOWN_TYPE or another element, check if long-press landed on an anchor link / image / video in DOM
-                evaluateJavascript(
-                    "(function() {" +
-                    "   var el = document.elementFromPoint(window.lastTouchX || 0, window.lastTouchY || 0);" +
-                    "   if (!el) el = document.activeElement;" +
-                    "   if (!el) return '';" +
-                    "   var a = el.closest('a');" +
-                    "   if (a && a.href) return 'LINK:' + a.href;" +
-                    "   var img = (el.tagName === 'IMG') ? el : el.querySelector('img');" +
-                    "   if (img && img.src) return 'IMG:' + img.src;" +
-                    "   var v = (el.tagName === 'VIDEO') ? el : (el.querySelector('video') || el.closest('video'));" +
-                    "   if (v && (v.currentSrc || v.src)) return 'VIDEO:' + (v.currentSrc || v.src);" +
-                    "   return '';" +
-                    "})();",
-                    evalResult -> {
-                        if (evalResult != null && !evalResult.equals("null") && !evalResult.isEmpty()) {
-                            String clean = evalResult.replace("\"", "").trim();
-                            if (clean.startsWith("LINK:")) {
-                                String linkUrl = clean.substring(5).trim();
-                                if (!linkUrl.isEmpty()) {
-                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                                    com.petal.browser.compose.menu.BrowserContextMenuManager.showLinkContextMenu(browserActivity, linkUrl);
-                                }
-                            } else if (clean.startsWith("IMG:")) {
-                                String imgUrl = clean.substring(4).trim();
-                                if (!imgUrl.isEmpty()) {
-                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                                    com.petal.browser.compose.menu.BrowserContextMenuManager.showImageContextMenu(browserActivity, imgUrl);
-                                }
-                            } else if (clean.startsWith("VIDEO:")) {
-                                String videoUrl = clean.substring(6).trim();
-                                if (!videoUrl.isEmpty()) {
-                                    v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                                    com.petal.browser.compose.menu.BrowserContextMenuManager.showVideoContextMenu(browserActivity, videoUrl);
-                                }
-                            }
-                        }
+                        );
                     }
                 );
+                return true;
             }
             return false;
         });
@@ -583,10 +616,6 @@ public class NinjaWebView extends NestedScrollWebView implements AlbumController
         }
         this.addJavascriptInterface(new WebAppInterface(context), "AndroidInterface");
         this.addJavascriptInterface(
-            new com.petal.browser.passkey.PetalWebAuthnBridge.WebAuthnJavascriptInterface(this),
-            "PetalWebAuthn"
-        );
-        this.addJavascriptInterface(
             new com.petal.browser.accessibility.PetalAccessibilityEngine.AccessibilityJavascriptInterface(title -> {
                 if (context instanceof com.petal.browser.activity.BrowserActivity) {
                     ((com.petal.browser.activity.BrowserActivity) context).runOnUiThread(() -> {
@@ -602,18 +631,6 @@ public class NinjaWebView extends NestedScrollWebView implements AlbumController
             com.petal.browser.engine.petal.SystemWebViewCredentials.INSTANCE.configure(this);
         } catch (Throwable t) {
             Log.w(TAG, "System credentials configuration bypassed: " + t.getMessage());
-        }
-
-        try {
-            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                androidx.webkit.WebViewCompat.addDocumentStartJavaScript(
-                    this,
-                    com.petal.browser.passkey.PetalWebAuthnBridge.WEBAUTHN_POLYFILL_JS,
-                    java.util.Collections.singleton("*")
-                );
-            }
-        } catch (Throwable t) {
-            Log.w(TAG, "Document start script not supported: " + t.getMessage());
         }
 
         profile = profileOriginal;
@@ -850,7 +867,7 @@ public class NinjaWebView extends NestedScrollWebView implements AlbumController
             url = url.replace(tracking, "");
         }
 
-        String urlToLoad = BrowserUnit.redirectURL( this, sp, url);
+        String urlToLoad = BrowserUnit.redirectURL(sp, url);
 
         if (!Objects.equals(HelperUnit.domain(this.getUrl()), HelperUnit.domain(urlToLoad)) && sp.getBoolean("sp_standard_always", true)) {
             sp.edit().putString("profile", "profileStandard").apply();

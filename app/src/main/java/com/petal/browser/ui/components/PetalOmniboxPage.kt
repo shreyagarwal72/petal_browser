@@ -787,13 +787,7 @@ fun PetalOmniboxPage(
                         if (suggestions.isNotEmpty()) {
                             Surface(
                                 shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                tonalElevation = 2.dp,
-                                shadowElevation = 1.dp,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                                ),
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -830,7 +824,7 @@ fun PetalOmniboxPage(
                                         ) { index, item ->
                                             Surface(
                                                 shape = RoundedCornerShape(16.dp),
-                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                color = MaterialTheme.colorScheme.surfaceContainer,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     // Rows fade in/out and slide smoothly into their

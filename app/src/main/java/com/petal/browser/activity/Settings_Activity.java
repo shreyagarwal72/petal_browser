@@ -16,15 +16,16 @@ import com.petal.browser.compose.settings.PetalSettingsBridge;
 import com.petal.browser.compose.settings.SettingsCategory;
 import com.petal.browser.unit.BrowserUnit;
 import com.petal.browser.unit.HelperUnit;
+import dagger.hilt.android.AndroidEntryPoint;
 
+@AndroidEntryPoint
 public class Settings_Activity extends AppCompatActivity {
 
     /**
      * Optional String extra naming a {@link SettingsCategory} enum constant (e.g.
      * "API_INTEGRATIONS"). When present, Settings opens straight to that category's
-     * page instead of the root category list - so a caller like the Petal Settings
-     * "Configure Keys" action lands the user on the actual page they asked for, not
-     * a list they then have to tap through themselves.
+     * page instead of the root category list so the user lands directly on the actual
+     * page they asked for, not a list they then have to tap through themselves.
      */
     public static final String EXTRA_SETTINGS_CATEGORY = "settings_category";
 

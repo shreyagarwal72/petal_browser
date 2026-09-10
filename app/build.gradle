@@ -1,10 +1,12 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'dagger.hilt.android.plugin'
 
 android {
 
-    compileSdk 35
+    compileSdk 36
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -166,4 +168,9 @@ dependencies {
     // Mozilla GeckoView (Release channel, stable 154 train)
     // Avoid unverified snapshots (such as 155.0.20260903215306) which trigger libxul.so SIGSEGV on Android 16.
     implementation 'org.mozilla.geckoview:geckoview:155.0.20260903215306'
+
+    // Dagger Hilt Dependency Injection
+    implementation 'com.google.dagger:hilt-android:2.51.1'
+    kapt 'com.google.dagger:hilt-compiler:2.51.1'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
 }

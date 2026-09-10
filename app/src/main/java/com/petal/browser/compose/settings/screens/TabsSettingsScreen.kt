@@ -28,7 +28,8 @@ import com.petal.browser.ui.components.M3ExpressiveVariableBackground
 fun TabsSettingsScreen(
     onNavigateToInactiveSettings: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    targetHighlightItemId: String? = null
 ) {
     val context = LocalContext.current
     val sp = remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -82,6 +83,7 @@ fun TabsSettingsScreen(
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .highlightableSetting("tabs_inactive", targetHighlightItemId)
                         .clickable {
                             showInactiveSettings = true
                             onNavigateToInactiveSettings()
@@ -123,7 +125,9 @@ fun TabsSettingsScreen(
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .highlightableSetting("tabs_management", targetHighlightItemId)
                 ) {
                     Row(
                         modifier = Modifier

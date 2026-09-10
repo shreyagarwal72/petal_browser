@@ -550,19 +550,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         browserBackCallback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackStarted(@NonNull androidx.activity.BackEventCompat backEvent) {
-                // Web content (especially GeckoView) may update gesture-exclusion rects
-                // while a page is loading. Clear them immediately when Android starts the
-                // predictive-back gesture so both websites and the Petal homepage receive it.
-                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
-                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetGestureExclusionRects();
-                } else if (ninjaWebView != null) {
-                    ninjaWebView.resetGestureExclusionRects();
-                }
-                predictiveBackStartedOnOverlay = isOverlayScreenShowing && !isDecorOverlayShowing && contentFrame != null && contentFrame.getChildCount() > 0 && !(contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof NinjaWebView) && !(contentFrame.getChildAt(contentFrame.getChildCount() - 1) instanceof com.petal.browser.view.PetalGeckoView);
-                if (predictiveBackStartedOnOverlay) {
-                    predictiveBackSwipeEdge = backEvent.getSwipeEdge();
-                    // Compose owns the overlay animation; do not also transform the Activity root.
-                }
+                // Browser content intentionally uses ordinary back navigation. Do not inspect
+                // or transform GeckoView/WebView while Android is previewing a gesture.
             }
 
             @Override
@@ -573,32 +562,13 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             @Override
             public void handleOnBackPressed() {
                 com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
-                boolean overlayDismissedByGesture = predictiveBackStartedOnOverlay;
                 predictiveBackStartedOnOverlay = false;
-
-                // Check if an actual overlay screen is still showing in contentFrame
-                View topContent = (contentFrame != null && contentFrame.getChildCount() > 0) ? contentFrame.getChildAt(0) : null;
-                boolean isBrowserView = (topContent instanceof NinjaWebView) || (topContent instanceof com.petal.browser.view.PetalGeckoView);
-                boolean hasOverlayView = isOverlayScreenShowing || (topContent != null && !isBrowserView);
-
-                if (overlayDismissedByGesture && !hasOverlayView) {
-                    // Compose's PredictiveBackHandler handled the dismiss animation and showed the album
-                    resetPredictiveBackVisuals();
-                } else {
-                    performBackNavigation();
-                    resetPredictiveBackVisuals();
-                }
+                performBackNavigation();
             }
 
             @Override
             public void handleOnBackCancelled() {
-                boolean wasOverlay = predictiveBackStartedOnOverlay;
                 predictiveBackStartedOnOverlay = false;
-                if (wasOverlay) {
-                    settlePredictiveBackGesture(false);
-                } else {
-                    resetPredictiveBackVisuals();
-                }
             }
         };
         getOnBackPressedDispatcher().addCallback(this, browserBackCallback);
@@ -686,7 +656,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
         if (sp.getBoolean("sp_check_update_on_launch", true)) {
-            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
         }
 
         // Chrome-style Tab Session Restoration & Rehydration
@@ -695,6 +664,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     com.petal.browser.unit.TabSessionManager.loadSession(this);
             if (savedSession != null && !savedSession.isEmpty()) {
                 com.petal.browser.view.PetalGeckoView activeRestoredGeckoView = null;
+                String activeRestoredUrl = null;
                 int activeIndex = -1;
                 for (int i = 0; i < savedSession.size(); i++) {
                     if (savedSession.get(i).isActive) {
@@ -716,11 +686,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             restoredGeckoView.setTabId(record.persistentTabId);
                         }
                         restoredGeckoView.setBrowserController(this);
-                        if (record.url != null && !record.url.isEmpty() && !isHomePage(record.url)) {
-                            restoredGeckoView.loadUrl(record.url);
-                        } else {
-                            restoredGeckoView.loadUrl("about:blank");
-                        }
+                        activeRestoredUrl = record.url;
                         if (record.title != null && !record.title.isEmpty()) {
                             restoredGeckoView.setAlbumTitle(record.title, record.url);
                         }
@@ -743,6 +709,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     showAlbum(activeRestoredGeckoView);
                 } else if (BrowserContainer.size() > 0) {
                     showAlbum(BrowserContainer.get(0));
+                }
+                final String urlToRestore = activeRestoredUrl;
+                final com.petal.browser.view.PetalGeckoView restoredActiveView = activeRestoredGeckoView;
+                if (urlToRestore != null && restoredActiveView != null) {
+                    restoredActiveView.post(() -> restoredActiveView.loadUrl(
+                            urlToRestore.isEmpty() || isHomePage(urlToRestore) ? "about:blank" : urlToRestore));
                 }
             }
         } catch (Exception e) {
@@ -793,6 +765,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             e.printStackTrace();
         }
         if (sp != null) {
+            if (com.petal.browser.ui.components.PetalBrowserPermissionDialog.shouldShow(this)) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() ->
+                        com.petal.browser.ui.components.PetalBrowserPermissionDialog.show(this), 350L);
+            }
             int currentVersionCode = 0;
             try {
                 currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
@@ -2169,6 +2145,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     ((NinjaWebView) controller).destroy();
                     com.petal.browser.unit.TabThumbnailCache.remove(((NinjaWebView) controller).getTabId());
                 } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    com.petal.browser.unit.TabThumbnailCache.remove(((com.petal.browser.view.PetalGeckoView) controller).getTabId());
                     ((com.petal.browser.view.PetalGeckoView) controller).destroy();
                 }
                 com.petal.browser.unit.TabThumbnailCache.remove(String.valueOf(controller.hashCode()));
@@ -2196,6 +2173,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             if (controller instanceof NinjaWebView) {
                 ((NinjaWebView) controller).destroy();
             } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.unit.TabThumbnailCache.remove(((com.petal.browser.view.PetalGeckoView) controller).getTabId());
                 ((com.petal.browser.view.PetalGeckoView) controller).destroy();
             }
             boolean isClosingCurrent = (controller == currentAlbumController);
@@ -2231,8 +2209,16 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
     @Override
     public synchronized void updateProgress(int progress) {
+        // GeckoView and WebView share this progress surface. Always resolve the URL
+        // from the active AlbumController first; relying on ninjaWebView here can
+        // incorrectly classify a GeckoView tab as an internal/home page and hide
+        // the indicator.
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            runOnUiThread(() -> updateProgress(progress));
+            return;
+        }
         androidx.compose.ui.platform.ComposeView progressBarCompose = findViewById(R.id.main_progress_bar_compose);
-        String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
+        String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
         boolean isInternalPage = currentUrl != null && (
             currentUrl.startsWith("petal://settings") ||
             currentUrl.startsWith("petal://history") ||
@@ -4992,6 +4978,61 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         String url = intent.getStringExtra(Intent.EXTRA_TEXT);
         Uri dataUri = intent.getData();
         String mimeType = intent.getType();
+
+        // ── External image: Open With / Share image → Petal built-in viewer ─
+        boolean isImageMime = mimeType != null && mimeType.startsWith("image/");
+        if (Intent.ACTION_VIEW.equals(action) && dataUri != null && isImageMime) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            String displayName = null;
+            try (android.database.Cursor c = getContentResolver().query(dataUri,
+                    new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                if (c != null && c.moveToFirst()) {
+                    int idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                    if (idx != -1) displayName = c.getString(idx);
+                }
+            } catch (Exception ignored) {}
+            if (displayName == null) displayName = dataUri.getLastPathSegment();
+            final String finalDisplayName = displayName;
+            final Uri finalUri = dataUri;
+            runOnUiThread(() -> {
+                android.view.View view = com.petal.browser.compose.downloads.PetalImageViewerBridge.createExternalViewerView(
+                    BrowserActivity.this, finalUri, finalDisplayName,
+                    () -> { runOnUiThread(this::performBackNavigation); return kotlin.Unit.INSTANCE; }
+                );
+                presentComposeScreen(view);
+            });
+            return;
+        }
+        if (Intent.ACTION_SEND.equals(action) && isImageMime) {
+            Uri sharedUri = (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
+                ? intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class)
+                : intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (sharedUri != null) {
+                sp.edit().putBoolean("show_overview", false).apply();
+                getIntent().setAction("");
+                String displayName2 = null;
+                try (android.database.Cursor c = getContentResolver().query(sharedUri,
+                        new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                    if (c != null && c.moveToFirst()) {
+                        int idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                        if (idx != -1) displayName2 = c.getString(idx);
+                    }
+                } catch (Exception ignored) {}
+                if (displayName2 == null) displayName2 = sharedUri.getLastPathSegment();
+                final String finalName2 = displayName2;
+                final Uri finalUri2 = sharedUri;
+                runOnUiThread(() -> {
+                    android.view.View view = com.petal.browser.compose.downloads.PetalImageViewerBridge.createExternalViewerView(
+                        BrowserActivity.this, finalUri2, finalName2,
+                        () -> { runOnUiThread(this::performBackNavigation); return kotlin.Unit.INSTANCE; }
+                    );
+                    presentComposeScreen(view);
+                });
+                return;
+            }
+        }
+
         if ("".equals(action)) {
             Log.i(TAG, "resumed FOSS browser");
         } else if (filePathCallback != null) {
@@ -5324,16 +5365,16 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
 
-    public void setWebView(String title, final String url, final boolean foreground) {
-        setWebView(title, url, foreground, false);
+    public com.petal.browser.view.PetalGeckoView setWebView(String title, final String url, final boolean foreground) {
+        return setWebView(title, url, foreground, false);
     }
 
-    public void setWebView(String title, final String url, final boolean foreground, final boolean isIncognito) {
-        setWebView(title, url, foreground, isIncognito, false);
+    public com.petal.browser.view.PetalGeckoView setWebView(String title, final String url, final boolean foreground, final boolean isIncognito) {
+        return setWebView(title, url, foreground, isIncognito, false);
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    public void setWebView(String title, final String url, final boolean foreground, final boolean isIncognito, final boolean isPopup) {
+    public com.petal.browser.view.PetalGeckoView setWebView(String title, final String url, final boolean foreground, final boolean isIncognito, final boolean isPopup) {
         com.petal.browser.view.PetalGeckoView geckoView = com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
             this, title, url, foreground, isIncognito
         );
@@ -5384,6 +5425,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         updateOmniBox();
         updatePersistentBottomNav();
+        return geckoView;
     }
 
     public synchronized void addAlbum(String title, final String url, final boolean foreground) {
@@ -5450,16 +5492,23 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
     }
 
-    public synchronized void addAlbumInGroup(String title, final String url, final boolean foreground, final String groupId, final String groupTitle) {
-        setWebView(title, url, foreground, false);
-        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
-            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
-            gv.setTabGroupId(groupId);
-            gv.setTabGroupTitle(groupTitle);
-        } else if (ninjaWebView != null) {
-            ninjaWebView.setTabGroupId(groupId);
-            ninjaWebView.setTabGroupTitle(groupTitle);
-        }
+    /**
+     * Opens a new tab and registers it as a member of the given tab group, both
+     * on the tab object itself (tabGroupId/tabGroupTitle, used for rendering)
+     * and in PetalTabGroupManager's persisted group membership list, using the
+     * tab's real ID from setWebView's return value rather than currentAlbumController
+     * - which only updates for foreground tabs and cannot be relied on here since
+     * "open in new tab in group" opens the new tab in the background.
+     */
+    public synchronized String addAlbumInGroup(String title, final String url, final boolean foreground, final String groupId, final String groupTitle) {
+        com.petal.browser.view.PetalGeckoView newTab = setWebView(title, url, foreground, false);
+        if (newTab == null) return null;
+
+        String newTabId = newTab.getTabId();
+        newTab.setTabGroupId(groupId);
+        newTab.setTabGroupTitle(groupTitle);
+        com.petal.browser.compose.tabs.PetalTabGroupManager.addTabToGroup(this, groupId, newTabId);
+        return newTabId;
     }
 
     public void triggerRebirth(Context context) {

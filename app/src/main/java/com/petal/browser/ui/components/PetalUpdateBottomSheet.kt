@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +56,11 @@ data class PetalUpdateInfo(
 
 object PetalUpdateSheetBridge {
     private val executor = Executors.newSingleThreadExecutor()
+
+    @JvmStatic
+    fun checkForUpdates(activity: ComponentActivity, isLaunchCheck: Boolean) {
+        com.petal.browser.unit.UpdateUnit.checkForUpdates(activity, isLaunchCheck)
+    }
 
     @JvmStatic
     fun showChangelogHistorySheet(activity: ComponentActivity) {
@@ -160,39 +167,54 @@ object PetalUpdateSheetBridge {
     }
 
     private fun showChangelogDialog(activity: ComponentActivity, releases: List<PetalUpdateInfo>) {
-        try {
-            val dialog = BottomSheetDialog(activity)
-            dialog.behavior.skipCollapsed = true
-            dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-            val composeView = ComposeView(activity).apply {
-                setViewTreeLifecycleOwner(activity)
-                setViewTreeViewModelStoreOwner(activity)
-                setViewTreeSavedStateRegistryOwner(activity)
-                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                setContent {
-                    PetalExpressiveTheme {
-                        PetalChangelogHistorySheetContent(
-                            releases = releases,
-                            onDismiss = {
-                                try { dialog.dismiss() } catch (ignored: Exception) {}
+        activity.runOnUiThread {
+            try {
+                var composeView: ComposeView? = null
+                composeView = ComposeView(activity).apply {
+                    setViewTreeLifecycleOwner(activity)
+                    setViewTreeViewModelStoreOwner(activity)
+                    setViewTreeSavedStateRegistryOwner(activity)
+                    setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+                    setContent {
+                        PetalExpressiveTheme {
+                            var showSheet by remember { mutableStateOf(true) }
+                            if (showSheet) {
+                                val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                                ModalBottomSheet(
+                                    onDismissRequest = {
+                                        showSheet = false
+                                        val parent = composeView?.parent as? android.view.ViewGroup
+                                        parent?.removeView(composeView)
+                                    },
+                                    sheetState = sheetState,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                                    dragHandle = { BottomSheetDefaults.DragHandle() }
+                                ) {
+                                    PetalChangelogHistorySheetContent(
+                                        releases = releases,
+                                        onDismiss = {
+                                            showSheet = false
+                                            val parent = composeView?.parent as? android.view.ViewGroup
+                                            parent?.removeView(composeView)
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 }
+                val rootView = activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+                rootView?.addView(
+                    composeView,
+                    android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            dialog.setContentView(composeView)
-            dialog.setOnShowListener {
-                val sheetView = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-                if (sheetView != null) {
-                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheetView).apply {
-                        skipCollapsed = true
-                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-                    }
-                }
-            }
-            dialog.show()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -248,39 +270,54 @@ object PetalUpdateSheetBridge {
 
     @JvmStatic
     fun showUpdateSheet(activity: ComponentActivity, updateInfo: PetalUpdateInfo) {
-        try {
-            val dialog = BottomSheetDialog(activity)
-            dialog.behavior.skipCollapsed = true
-            dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-            val composeView = ComposeView(activity).apply {
-                setViewTreeLifecycleOwner(activity)
-                setViewTreeViewModelStoreOwner(activity)
-                setViewTreeSavedStateRegistryOwner(activity)
-                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                setContent {
-                    PetalExpressiveTheme {
-                        PetalUpdateSheetContent(
-                            updateInfo = updateInfo,
-                            onDismiss = {
-                                try { dialog.dismiss() } catch (ignored: Exception) {}
+        activity.runOnUiThread {
+            try {
+                var composeView: ComposeView? = null
+                composeView = ComposeView(activity).apply {
+                    setViewTreeLifecycleOwner(activity)
+                    setViewTreeViewModelStoreOwner(activity)
+                    setViewTreeSavedStateRegistryOwner(activity)
+                    setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+                    setContent {
+                        PetalExpressiveTheme {
+                            var showSheet by remember { mutableStateOf(true) }
+                            if (showSheet) {
+                                val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                                ModalBottomSheet(
+                                    onDismissRequest = {
+                                        showSheet = false
+                                        val parent = composeView?.parent as? android.view.ViewGroup
+                                        parent?.removeView(composeView)
+                                    },
+                                    sheetState = sheetState,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                                    dragHandle = { BottomSheetDefaults.DragHandle() }
+                                ) {
+                                    PetalUpdateSheetContent(
+                                        updateInfo = updateInfo,
+                                        onDismiss = {
+                                            showSheet = false
+                                            val parent = composeView?.parent as? android.view.ViewGroup
+                                            parent?.removeView(composeView)
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 }
+                val rootView = activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+                rootView?.addView(
+                    composeView,
+                    android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            dialog.setContentView(composeView)
-            dialog.setOnShowListener {
-                val sheetView = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-                if (sheetView != null) {
-                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheetView).apply {
-                        skipCollapsed = true
-                        state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-                    }
-                }
-            }
-            dialog.show()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -308,8 +345,7 @@ fun PetalUpdateSheetContent(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var isDownloading by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableIntStateOf(0) }
+    var isDownloadEnqueued by remember { mutableStateOf(false) }
 
     var fetchedNotes by remember(updateInfo.releaseNotes) { mutableStateOf<String?>(null) }
     var isFetchingNotes by remember(updateInfo.releaseNotes) { mutableStateOf(false) }
@@ -337,31 +373,22 @@ fun PetalUpdateSheetContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Drag handle
-            Box(
-                modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-            )
-
             // Header Icon Badge
             Surface(
                 shape = CircleShape,
                 color = if (updateInfo.isUpdateAvailable) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(60.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = if (updateInfo.isUpdateAvailable) Icons.Rounded.SystemUpdate else Icons.Rounded.CheckCircle,
                         contentDescription = null,
                         tint = if (updateInfo.isUpdateAvailable) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
@@ -377,10 +404,24 @@ fun PetalUpdateSheetContent(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Text(
+                        text = updateInfo.versionName,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+
                 Text(
-                    text = if (updateInfo.isUpdateAvailable) "Squashed bugs, added magic. Ready to install!" else "Running the latest release (${updateInfo.versionName})",
+                    text = if (updateInfo.isUpdateAvailable) "Squashed bugs, added magic. Ready to download & install!" else "Running the latest release with all the newest features.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
 
@@ -391,11 +432,13 @@ fun PetalUpdateSheetContent(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    LinearRipplingWavyProgressIndicator(
-                        progress = null,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        height = 6.dp,
-                        strokeWidth = 3.5.dp
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(10.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     )
                 }
             } else if (notesToDisplay.isNotBlank()) {
@@ -404,13 +447,13 @@ fun PetalUpdateSheetContent(
                     horizontalAlignment = Alignment.Start
                 ) {
                     Text(
-                        text = "What's New in ${updateInfo.versionName}",
+                        text = "What's New",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 6.dp)
                     )
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(28.dp),
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -430,49 +473,58 @@ fun PetalUpdateSheetContent(
 
             // Action Buttons
             if (updateInfo.isUpdateAvailable && updateInfo.downloadUrl.isNotBlank()) {
-                if (isDownloading) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                if (isDownloadEnqueued) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        LinearRipplingWavyProgressIndicator(
-                            progress = downloadProgress / 100f,
-                            modifier = Modifier.fillMaxWidth(),
-                            height = 8.dp,
-                            strokeWidth = 4.dp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "Downloading update... $downloadProgress%",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DownloadDone,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Downloading in Background",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "Download won't stop if app is closed. Installer will open automatically.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
                     }
                 } else {
                     Button(
                         onClick = {
                             PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.HEAVY_CLICK, 0.9f)
-                            isDownloading = true
-                            coroutineScope.launch(Dispatchers.IO) {
-                                downloadAndInstallApk(
-                                    context = context,
-                                    apkUrl = updateInfo.downloadUrl,
-                                    version = updateInfo.versionName,
-                                    onProgress = { progress ->
-                                        coroutineScope.launch(Dispatchers.Main) {
-                                             downloadProgress = progress
-                                             if (progress >= 100) isDownloading = false
-                                        }
-                                    }
-                                )
-                            }
+                            isDownloadEnqueued = true
+                            com.petal.browser.unit.PetalUpdateInstallerReceiver.enqueueSystemUpdateDownload(
+                                context = context,
+                                downloadUrl = updateInfo.downloadUrl,
+                                version = updateInfo.versionName
+                            )
                         },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Icon(Icons.Rounded.FileDownload, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Install Update Now")
+                        Text("Download & Install Update")
                     }
                 }
             }
@@ -539,98 +591,7 @@ private fun fetchMarkdownFromUrl(urlStr: String): String {
     }
 }
 
-private fun downloadAndInstallApk(
-    context: android.content.Context,
-    apkUrl: String,
-    version: String,
-    onProgress: (Int) -> Unit
-) {
-    try {
-        val downloadsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
-        val apkFile = File(downloadsDir, "petal_update_${version.replace(Regex("[^a-zA-Z0-9]"), "_")}.apk")
-        if (apkFile.exists()) apkFile.delete()
 
-        var currentUrl = apkUrl
-        var conn: HttpURLConnection? = null
-        var redirects = 0
-        while (redirects < 5) {
-            val url = URL(currentUrl)
-            conn = url.openConnection() as HttpURLConnection
-            conn.setRequestProperty("User-Agent", "PetalBrowserApp/$version")
-            conn.instanceFollowRedirects = true
-            conn.connectTimeout = 10000
-            conn.readTimeout = 10000
-            val status = conn.responseCode
-            if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
-                val redirectUrl = conn.getHeaderField("Location")
-                if (!redirectUrl.isNullOrEmpty()) {
-                    currentUrl = redirectUrl
-                    redirects++
-                    continue
-                }
-            }
-            break
-        }
-
-        if (conn == null || conn.responseCode != HttpURLConnection.HTTP_OK) {
-            throw Exception("HTTP connection failed: ${conn?.responseCode}")
-        }
-
-        val totalSize = conn.contentLength
-        val inputStream = conn.inputStream
-        val outputStream = apkFile.outputStream()
-
-        val buffer = ByteArray(8192)
-        var downloaded = 0
-        var bytesRead: Int
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            outputStream.write(buffer, 0, bytesRead)
-            downloaded += bytesRead
-            if (totalSize > 0) {
-                onProgress((downloaded * 100L / totalSize).toInt())
-            }
-        }
-        outputStream.flush()
-        outputStream.close()
-        inputStream.close()
-
-        onProgress(100)
-        installApk(context, apkFile)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        onProgress(0)
-    }
-}
-
-private fun installApk(context: android.content.Context, apkFile: File) {
-    try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            if (!context.packageManager.canRequestPackageInstalls()) {
-                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-                com.petal.browser.view.NinjaToast.show(context, "Please grant permission to install updates")
-                return
-            }
-        }
-
-        val apkUri = androidx.core.content.FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            apkFile
-        )
-
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }
-        context.startActivity(installIntent)
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
 
 @Composable
 fun PetalChangelogHistorySheetContent(
@@ -640,36 +601,27 @@ fun PetalChangelogHistorySheetContent(
     val context = LocalContext.current
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Drag handle
-            Box(
-                modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(64.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Rounded.History,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
@@ -707,27 +659,28 @@ fun PetalChangelogHistorySheetContent(
                 ) {
                     items(releases) { rel ->
                         Card(
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(28.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Surface(
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.tertiary,
                                         shape = CircleShape
                                     ) {
                                         Text(
                                             text = rel.versionName,
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onPrimary
+                                            color = MaterialTheme.colorScheme.onTertiary
                                         )
                                     }
                                     if (rel.releaseUrl.isNotBlank()) {
@@ -757,6 +710,7 @@ fun PetalChangelogHistorySheetContent(
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
                                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         PetalMarkdownText(

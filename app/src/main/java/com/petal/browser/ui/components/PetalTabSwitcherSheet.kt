@@ -52,6 +52,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
+import com.petal.browser.browser.PlaceholderAlbumController
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 
 data class TabModel(
@@ -116,11 +117,12 @@ object PetalTabSwitcherBridge {
                                     val rawUrl = try { album.getUrl() } catch (_: Exception) { null }
                                     val isIncognitoTab = (album is com.petal.browser.view.PetalGeckoView && album.isIncognito()) ||
                                             ((album is com.petal.browser.view.NinjaWebView) && album.isIncognito())
-                                    val faviconBitmap = if (album is com.petal.browser.view.PetalGeckoView) {
-                                        album.getFavicon()
-                                    } else if (album is com.petal.browser.view.NinjaWebView) {
-                                        album.getFavicon()
-                                    } else null
+                                    val faviconBitmap = when (album) {
+                                        is com.petal.browser.view.PetalGeckoView -> album.getFavicon()
+                                        is com.petal.browser.view.NinjaWebView -> album.getFavicon()
+                                        is PlaceholderAlbumController -> album.getFavicon()
+                                        else -> null
+                                    }
                                     val previewBitmap = if (album is com.petal.browser.view.PetalGeckoView) {
                                         album.getCachedPreviewBitmap()
                                     } else if (album is com.petal.browser.view.NinjaWebView) {
@@ -134,9 +136,19 @@ object PetalTabSwitcherBridge {
                                     }
                                     val displayUrl = if (rawUrl.isNullOrBlank() || rawUrl.equals("about:blank", ignoreCase = true) || rawUrl.startsWith("file:///android_asset/")) "Petal Home" else rawUrl
                                     val group = com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(context, album.hashCode().toString())
-                                    val webViewGroupId = if (album is com.petal.browser.view.PetalGeckoView) album.getTabGroupId() else if (album is com.petal.browser.view.NinjaWebView) album.tabGroupId else null
+                                    val webViewGroupId = when (album) {
+                                        is com.petal.browser.view.PetalGeckoView -> album.getTabGroupId()
+                                        is com.petal.browser.view.NinjaWebView -> album.tabGroupId
+                                        is PlaceholderAlbumController -> album.getTabGroupId()
+                                        else -> null
+                                    }
                                     val effectiveGroupId = group?.id ?: webViewGroupId
-                                    val effectiveGroupTitle = group?.title ?: (if (album is com.petal.browser.view.PetalGeckoView) album.getTabGroupTitle() else if (album is com.petal.browser.view.NinjaWebView) album.tabGroupTitle else null)
+                                    val effectiveGroupTitle = group?.title ?: when (album) {
+                                        is com.petal.browser.view.PetalGeckoView -> album.getTabGroupTitle()
+                                        is com.petal.browser.view.NinjaWebView -> album.tabGroupTitle
+                                        is PlaceholderAlbumController -> album.getTabGroupTitle()
+                                        else -> null
+                                    }
                                     val effectiveGroupColor = group?.colorHex
 
                                     com.petal.browser.compose.tabs.PetalTabItem(
@@ -194,9 +206,9 @@ object PetalTabSwitcherBridge {
                                 }
                                 activity.addAlbum(restoreTitle, restoreUrl, true, restoredTab.isIncognito)
                             }
-                            if (tabItems.none { it.id == restoredTab.id }) {
-                                tabItems.add(restoredTab)
-                            }
+                            // addAlbum() creates the live tab and the parent owns the
+                            // authoritative tab list. Do not insert the archived ID
+                            // here: it is no longer the ID of the newly-created tab.
                             com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(context)
                         },
                         onNewTab = { isIncognito ->
@@ -212,7 +224,10 @@ object PetalTabSwitcherBridge {
                             }
                         },
                         onOpenSettings = {
-                            (activity as? BrowserActivity)?.showOverflow(null, null, 0, "", "", null, null, 0)
+                            // This callback is only wired to the gear icon on the
+                            // Inactive Tabs page — deep-link straight into its
+                            // settings screen instead of the generic overflow menu.
+                            (activity as? BrowserActivity)?.showInactiveTabsSettingsScreen()
                         },
                         onTabVisible = { tabItem ->
                             val targetAlbum = BrowserContainer.list()

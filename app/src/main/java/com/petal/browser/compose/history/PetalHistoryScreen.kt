@@ -11,10 +11,11 @@ package com.petal.browser.compose.history
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,10 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.ComposeView
@@ -131,7 +135,17 @@ fun PetalHistoryScreen(
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchOpen by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
     var showClearConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isSearchOpen) {
+        if (isSearchOpen && searchQuery.isEmpty()) {
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
 
     // Load history records from SQLite database asynchronously
     var rawHistory by remember { mutableStateOf<List<Record>?>(null) }
@@ -217,6 +231,18 @@ fun PetalHistoryScreen(
                     subtitle = "${filteredHistory.size} items",
                     onBack = onDismiss,
                     actions = {
+                        HeaderActionIcon(
+                            icon = if (isSearchOpen) Icons.Rounded.Close else Icons.Rounded.Search,
+                            contentDescription = if (isSearchOpen) "Close search" else "Search history",
+                            onClick = {
+                                if (isSearchOpen) {
+                                    isSearchOpen = false
+                                    searchQuery = ""
+                                } else {
+                                    isSearchOpen = true
+                                }
+                            }
+                        )
                         if (rawHistory?.isNotEmpty() == true) {
                             HeaderActionIcon(
                                 icon = Icons.Rounded.DeleteSweep,
@@ -227,28 +253,35 @@ fun PetalHistoryScreen(
                     }
                 )
 
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
-                    placeholder = { Text("Search history...") },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Clear")
+                AnimatedVisibility(
+                    visible = isSearchOpen,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                            .focusRequester(focusRequester),
+                        placeholder = { Text("Search history...") },
+                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Rounded.Close, contentDescription = "Clear")
+                                }
                             }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
                     )
-                )
+                }
 
                 Box(
                     modifier = Modifier
@@ -367,9 +400,9 @@ private fun HistoryCardItem(
     }
 
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

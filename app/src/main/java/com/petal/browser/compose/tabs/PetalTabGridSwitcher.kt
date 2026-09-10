@@ -38,9 +38,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -133,6 +136,16 @@ fun PetalTabGridSwitcher(
     val context = LocalContext.current
     val sp = remember { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchOpen by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(isSearchOpen) {
+        if (isSearchOpen && searchQuery.isEmpty()) {
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
     var displayMode by remember {
         val savedMode = sp.getString("sp_tab_display_mode", "GRID") ?: "GRID"
         mutableStateOf(try { TabDisplayMode.valueOf(savedMode) } catch (e: Exception) { TabDisplayMode.GRID })
@@ -320,6 +333,19 @@ fun PetalTabGridSwitcher(
                     enableLiquidGlass = true,
                     actions = {
                         HeaderActionIcon(
+                            icon = if (isSearchOpen) Icons.Rounded.Close else Icons.Rounded.Search,
+                            contentDescription = if (isSearchOpen) "Close search" else "Search tabs",
+                            onClick = {
+                                if (isSearchOpen) {
+                                    isSearchOpen = false
+                                    searchQuery = ""
+                                } else {
+                                    isSearchOpen = true
+                                }
+                            }
+                        )
+
+                        HeaderActionIcon(
                             icon = Icons.Rounded.Add,
                             contentDescription = "New Tab",
                             onClick = {
@@ -380,10 +406,10 @@ fun PetalTabGridSwitcher(
                                         refreshGroups()
                                         selectedCategory = TabCategory.GROUPS
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                message = if (count > 0) "Organized tabs into $count domain groups" else "No matching domain pairs found to group",
-                                                duration = SnackbarDuration.Short
-                                            )
+                                             snackbarHostState.showSnackbar(
+                                                 message = if (count > 0) "Organized tabs into $count domain groups" else "No matching domain pairs found to group",
+                                                 duration = SnackbarDuration.Short
+                                             )
                                         }
                                     }
                                 )
@@ -410,48 +436,57 @@ fun PetalTabGridSwitcher(
                         onSelect = { selectedCategory = it }
                     )
 
-                    Spacer(Modifier.height(10.dp))
-
                     // ── Real-time tab & group search ────────────────────────────
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = {
-                            Text(
-                                if (selectedCategory == TabCategory.GROUPS) "Search tab groups..." else "Search open tabs...",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Rounded.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        Icons.Rounded.Close,
-                                        contentDescription = "Clear search",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
+                    AnimatedVisibility(
+                        visible = isSearchOpen,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = {
+                                    Text(
+                                        if (selectedCategory == TabCategory.GROUPS) "Search tab groups..." else "Search open tabs...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            focusedBorderColor = accentColor,
-                            unfocusedBorderColor = Color.Transparent
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.Search,
+                                        contentDescription = "Search",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(
+                                                Icons.Rounded.Close,
+                                                contentDescription = "Clear search",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(24.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    focusedBorderColor = accentColor,
+                                    unfocusedBorderColor = Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                            )
+                        }
+                    }
 
                     // ── Inactive Items Banner (Chrome / Brave style matching image.png) ──
                     val inactiveCount = inactiveTabs.size
@@ -848,6 +883,7 @@ fun PetalTabGridSwitcher(
             onRestoreTab = { tabToRestore ->
                 PetalInactiveTabManager.restoreInactiveTab(context, tabToRestore)
                 refreshInactiveTabs()
+                isInactiveSheetVisible = false
                 onRestoreTab?.invoke(
                     PetalTabItem(
                         id = tabToRestore.id,
@@ -863,6 +899,7 @@ fun PetalTabGridSwitcher(
             onRestoreAllTabs = {
                 val restored = PetalInactiveTabManager.restoreAllInactiveTabs(context)
                 refreshInactiveTabs()
+                isInactiveSheetVisible = false
                 restored.forEach { tabToRestore ->
                     onRestoreTab?.invoke(
                         PetalTabItem(

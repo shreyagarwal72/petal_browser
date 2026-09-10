@@ -54,6 +54,9 @@ import com.petal.browser.ui.components.IconSwitch
 import com.petal.browser.ui.components.PetalAboutDeveloperBridge
 import com.petal.browser.ui.components.PetalThemedSnackbarHost
 import com.petal.browser.ui.components.bouncyClickable
+import com.petal.browser.ui.components.SettingsItem
+import com.petal.browser.ui.components.SwitchSettingItem
+import com.petal.browser.ui.components.getGroupItemShape
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.ui.theme.defaultPaletteId
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -406,14 +409,17 @@ private fun RenderUserProfileContent(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // Main User Profile Hero Card
-            Surface(
+            // Main User Profile Hero Card — containment style matched to Clear Browsing Data screen
+            Card(
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -489,7 +495,7 @@ private fun RenderUserProfileContent(
 
                     Text(
                         text = if (profile.isSignedIn) profile.email else "Petal Explorer Profile",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -497,8 +503,11 @@ private fun RenderUserProfileContent(
 
                     // Avatar Selection Section (Built-in Presets vs Gallery)
                     Text(
-                        text = "Choose Profile Picture",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        text = "CHOOSE PROFILE PICTURE",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.align(Alignment.Start)
                     )
@@ -537,7 +546,7 @@ private fun RenderUserProfileContent(
                             Surface(
                                 shape = CircleShape,
                                 color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border = if (isSelected) BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                                border = if (isSelected) BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary) else null,
                                 modifier = Modifier
                                     .size(52.dp)
                                     .bouncyClickable { GoogleAccountManager.updateAvatarPreset(context, presetId) }
@@ -575,8 +584,19 @@ private fun RenderUserProfileContent(
                 }
             }
 
-            // Tappable-only Google Web Accounts SSO card
-            Surface(
+            // Tappable-only Google Web Accounts SSO item — shared SettingsItem containment
+            SettingsItem(
+                title = "Open Google Accounts Web SSO",
+                subtitle = "Launch Google Accounts login page to sign in to Google Web Services (YouTube, Gmail, Drive, Maps)",
+                leadingIcon = {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.home_filled),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                shape = RoundedCornerShape(24.dp),
                 onClick = {
                     onOpenOAuth(
                         PetalShortcut(
@@ -587,194 +607,102 @@ private fun RenderUserProfileContent(
                         )
                     )
                 },
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                tonalElevation = 1.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bouncyClickable {
-                        onOpenOAuth(
-                            PetalShortcut(
-                                "Google Accounts SSO",
-                                "https://accounts.google.com/ServiceLogin?hl=en",
-                                "https://accounts.google.com/ServiceLogin?hl=en",
-                                Color(0xFF4285F4)
-                            )
-                        )
-                    }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.bouncyClickable()
+            )
+
+            // Section 1: SECURITY & PRIVACY — eyebrow label matched to Clear Browsing Data screen
+            Text(
+                text = "SECURITY & PRIVACY",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+            run {
+                val securityItemCount = 3
+                val isLockActive = sp.getBoolean("sp_app_lock_enabled", false)
+                var isClearOnExit by remember { mutableStateOf(sp.getBoolean("sp_clear_quit", false) || sp.getBoolean("sp_clear_on_exit", false)) }
+                var isHttpsOnly by remember { mutableStateOf(sp.getBoolean("sp_https_only", true)) }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.home_filled),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Open Google Accounts Web SSO",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "Launch Google Accounts login page to sign in to Google Web Services (YouTube, Gmail, Drive, Maps)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.arrow_forward_ios_new),
-                        contentDescription = "Open SSO",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Section 1: 🛡️ Security & Privacy Center
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.layers_filled),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Text(
-                            text = "Security & Privacy Center",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Spacer(Modifier.height(14.dp))
-
                     // Dedicated App & Profile Lock Config Navigation Row
-                    val isLockActive = sp.getBoolean("sp_app_lock_enabled", false)
-                    AccountActionRow(
+                    SettingsItem(
                         title = "App & Profile Lock",
                         subtitle = if (isLockActive) "Protection active • Fingerprint or Password" else "Require authentication on app startup",
-                        iconPainter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.mobile_vibrate_filled),
-                        trailing = {
+                        leadingIcon = {
                             Icon(
-                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.arrow_forward_ios_new),
-                                contentDescription = "Configure Lock",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
+                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.mobile_vibrate_filled),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         },
-                        onClick = {
-                            onOpenAppLockConfig()
-                        }
+                        shape = getGroupItemShape(0, securityItemCount),
+                        onClick = { onOpenAppLockConfig() }
                     )
 
-                    Spacer(Modifier.height(8.dp))
-
                     // Auto-Clear on Exit Preference
-                    var isClearOnExit by remember { mutableStateOf(sp.getBoolean("sp_clear_quit", false) || sp.getBoolean("sp_clear_on_exit", false)) }
-                    AccountActionRow(
+                    SwitchSettingItem(
                         title = "Auto-Clear Data on Exit",
                         subtitle = "Automatically purge cache, history, and open tabs on exit (keeps account logins safe)",
-                        iconPainter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.restore_page_filled),
-                        trailing = {
-                            IconSwitch(
-                                checked = isClearOnExit,
-                                icon = Icons.Rounded.CleaningServices,
-                                onCheckedChange = { checked ->
-                                    isClearOnExit = checked
-                                    sp.edit()
-                                        .putBoolean("sp_clear_quit", checked)
-                                        .putBoolean("sp_clear_on_exit", checked)
-                                        .apply()
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (checked) "Auto-Clear on exit enabled" else "Auto-Clear on exit disabled"
-                                        )
-                                    }
-                                }
-                            )
-                        },
-                        onClick = {
-                            isClearOnExit = !isClearOnExit
+                        checked = isClearOnExit,
+                        onCheckedChange = { checked ->
+                            isClearOnExit = checked
                             sp.edit()
-                                .putBoolean("sp_clear_quit", isClearOnExit)
-                                .putBoolean("sp_clear_on_exit", isClearOnExit)
+                                .putBoolean("sp_clear_quit", checked)
+                                .putBoolean("sp_clear_on_exit", checked)
                                 .apply()
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(
-                                    if (isClearOnExit) "Auto-Clear on exit enabled" else "Auto-Clear on exit disabled"
+                                    if (checked) "Auto-Clear on exit enabled" else "Auto-Clear on exit disabled"
                                 )
                             }
+                        },
+                        shape = getGroupItemShape(1, securityItemCount),
+                        leadingIcon = {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.restore_page_filled),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     )
 
-                    Spacer(Modifier.height(8.dp))
-
                     // HTTPS-Only Mode Status
-                    var isHttpsOnly by remember { mutableStateOf(sp.getBoolean("sp_https_only", true)) }
-                    AccountActionRow(
+                    SwitchSettingItem(
                         title = "HTTPS-Only Mode",
                         subtitle = if (isHttpsOnly) "Active • HTTP automatically upgraded to HTTPS" else "Disabled • Insecure connections allowed",
-                        iconPainter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.layers_filled),
-                        trailing = {
-                            IconSwitch(
-                                checked = isHttpsOnly,
-                                icon = Icons.Rounded.Lock,
-                                onCheckedChange = { checked ->
-                                    isHttpsOnly = checked
-                                    sp.edit().putBoolean("sp_https_only", checked).apply()
-                                }
-                            )
+                        checked = isHttpsOnly,
+                        onCheckedChange = { checked ->
+                            isHttpsOnly = checked
+                            sp.edit().putBoolean("sp_https_only", checked).apply()
                         },
-                        onClick = {
-                            isHttpsOnly = !isHttpsOnly
-                            sp.edit().putBoolean("sp_https_only", isHttpsOnly).apply()
+                        shape = getGroupItemShape(2, securityItemCount),
+                        leadingIcon = {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.layers_filled),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     )
                 }
             }
 
-            // Section 5: 📊 Local Data & Storage Audit
+            // Section 2: STORAGE & DATA — eyebrow label matched to Clear Browsing Data screen
+            Text(
+                text = "STORAGE & DATA",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
+            )
             var cacheSizeMb by remember {
                 mutableStateOf(
                     try {
@@ -817,17 +745,19 @@ private fun RenderUserProfileContent(
                 )
             }
 
-            Surface(
+            Card(
                 shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                tonalElevation = 1.dp,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -843,12 +773,12 @@ private fun RenderUserProfileContent(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Storage & Data Audit",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Inspect application storage & manage browsing data",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -863,7 +793,7 @@ private fun RenderUserProfileContent(
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -902,12 +832,12 @@ private fun RenderUserProfileContent(
                                     Column {
                                         Text(
                                             text = "Web Cache & App Storage",
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "Temporary cached network files and assets",
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -966,10 +896,18 @@ private fun RenderUserProfileContent(
 
                     Spacer(Modifier.height(12.dp))
 
-                    AccountActionRow(
+                    SettingsItem(
                         title = "Clear Browsing Data",
                         subtitle = "Select & remove history, cookies, web storage, autofill & permissions",
-                        iconPainter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.reset_settings_rounded),
+                        leadingIcon = {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.petal.browser.R.drawable.reset_settings_rounded),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        },
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = RoundedCornerShape(16.dp),
                         onClick = { showClearDataDialog = true }
                     )
                 }
@@ -1080,69 +1018,6 @@ private fun RenderUserProfileContent(
         }
     }
     }
-    }
-}
-
-@Composable
-private fun AccountActionRow(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    iconPainter: androidx.compose.ui.graphics.painter.Painter? = null,
-    trailing: (@Composable () -> Unit)? = null,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .bouncyClickable(scaleDown = 0.98f, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center
-        ) {
-            if (iconPainter != null) {
-                Icon(
-                    painter = iconPainter,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (subtitle.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        if (trailing != null) {
-            trailing()
-        }
     }
 }
 

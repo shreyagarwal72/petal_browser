@@ -12,14 +12,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.petal.browser.ui.components.ExpressiveHeader
+import com.petal.browser.ui.components.HeaderActionIcon
 import com.petal.browser.ui.components.M3ExpressiveVariableBackground
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.predictive.PetalPredictiveBackSurface
@@ -47,6 +52,16 @@ fun PetalInactiveTabsSheet(
     val context = LocalContext.current
     val thresholdDays = remember { PetalInactiveTabManager.getThresholdDays(context) }
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchOpen by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(isSearchOpen) {
+        if (isSearchOpen && searchQuery.isEmpty()) {
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
 
     val filteredTabs = remember(inactiveTabs, searchQuery) {
         if (searchQuery.isBlank()) inactiveTabs
@@ -72,90 +87,82 @@ fun PetalInactiveTabsSheet(
 
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // ── M3 Expressive Header ──
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text(
-                                text = "Inactive Tabs",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            val subtitleText = if (thresholdDays > 0) {
-                                "Idle for $thresholdDays day${if (thresholdDays == 1) "" else "s"} · ${inactiveTabs.size} archived"
-                            } else {
-                                "${inactiveTabs.size} archived & duplicate tabs"
-                            }
-                            Text(
-                                text = subtitleText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                            IconButton(onClick = onOpenSettings) {
-                                Icon(
-                                    Icons.Rounded.Settings,
-                                    contentDescription = "Inactive Settings",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    Icons.Rounded.Close,
-                                    contentDescription = "Close",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                // ── M3 Expressive Header (shared component, matches rest of app) ──
+                val subtitleText = remember(thresholdDays, inactiveTabs.size) {
+                    if (thresholdDays > 0) {
+                        "Idle for $thresholdDays day${if (thresholdDays == 1) "" else "s"} · ${inactiveTabs.size} archived"
+                    } else {
+                        "${inactiveTabs.size} archived & duplicate tabs"
                     }
                 }
+                ExpressiveHeader(
+                    title = "Inactive Tabs",
+                    subtitle = subtitleText,
+                    onBack = onDismiss,
+                    actions = {
+                        HeaderActionIcon(
+                            icon = if (isSearchOpen) Icons.Rounded.Close else Icons.Rounded.Search,
+                            contentDescription = if (isSearchOpen) "Close search" else "Search inactive tabs",
+                            onClick = {
+                                if (isSearchOpen) {
+                                    isSearchOpen = false
+                                    searchQuery = ""
+                                } else {
+                                    isSearchOpen = true
+                                }
+                            }
+                        )
+                        HeaderActionIcon(
+                            icon = Icons.Rounded.Settings,
+                            contentDescription = "Inactive Settings",
+                            onClick = onOpenSettings
+                        )
+                    }
+                )
 
                 // ── Search Box ──
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search inactive tabs…") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Rounded.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(
-                                    Icons.Rounded.Close,
-                                    contentDescription = "Clear",
-                                    modifier = Modifier.size(18.dp)
-                                )
+                AnimatedVisibility(
+                    visible = isSearchOpen,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search inactive tabs…") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        Icons.Rounded.Close,
+                                        contentDescription = "Clear",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .focusRequester(focusRequester)
+                    )
+                }
 
                 // ── Bulk Actions ──
                 if (inactiveTabs.isNotEmpty()) {
@@ -297,7 +304,7 @@ private fun InactiveTabItemCard(
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        tonalElevation = 1.dp,
         modifier = modifier
             .fillMaxWidth()
             .clickable { onRestore() }
@@ -316,7 +323,7 @@ private fun InactiveTabItemCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.size(38.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {

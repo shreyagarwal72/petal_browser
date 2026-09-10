@@ -42,7 +42,6 @@ interface PetalLinkContextMenuHandler {
     fun onOpenInNewTab() {}
     fun onOpenInNewTabInGroup() {}
     fun onOpenInIncognitoTab() {}
-    fun onOpenInNewWindow() {}
     fun onPreviewPage() {}
     fun onCopyLinkAddress() {}
     fun onCopyLinkText() {}
@@ -63,6 +62,8 @@ interface PetalLinkContextMenuHandler {
     fun onDialPhoneNumber(tel: String) {}
     fun onSendEmail(mailto: String) {}
     fun onOpenMapLocation(geo: String) {}
+    /** Opens the image in Petal's built-in full-screen image viewer */
+    fun onViewInPetalViewer() {}
 }
 
 private data class MenuItemSpec(
@@ -188,11 +189,7 @@ fun PetalLinkContextMenuSheet(
             }
 
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
+            Spacer(Modifier.height(8.dp))
 
             // Primary Navigation Actions
             val primaryActions = remember(isImage, isVideo, isAudio, selectedText, linkUrl) {
@@ -263,6 +260,10 @@ fun PetalLinkContextMenuSheet(
                     }
                     isImage -> {
                         listOf(
+                            MenuItemSpec("View in Petal Viewer", Icons.Rounded.Image) {
+                                onDismiss()
+                                handler.onViewInPetalViewer()
+                            },
                             MenuItemSpec("Open image in new tab", Icons.Rounded.OpenInNew) {
                                 onDismiss()
                                 handler.onOpenImageInNewTab()
@@ -307,10 +308,6 @@ fun PetalLinkContextMenuSheet(
                                 onDismiss()
                                 handler.onOpenInIncognitoTab()
                             },
-                            MenuItemSpec("Open in new window", Icons.Rounded.OpenInBrowser) {
-                                onDismiss()
-                                handler.onOpenInNewWindow()
-                            },
                             MenuItemSpec("Preview page", Icons.Rounded.FindInPage) {
                                 onDismiss()
                                 handler.onPreviewPage()
@@ -320,19 +317,23 @@ fun PetalLinkContextMenuSheet(
                 }
             }
 
-            primaryActions.forEach { spec ->
-                ContextMenuItemRow(
-                    icon = spec.icon,
-                    title = spec.title,
-                    onClick = spec.onClick
-                )
+            Surface(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Column {
+                    primaryActions.forEach { spec ->
+                        ContextMenuItemRow(
+                            icon = spec.icon,
+                            title = spec.title,
+                            onClick = spec.onClick
+                        )
+                    }
+                }
             }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
+            Spacer(Modifier.height(8.dp))
 
             // Clipboard & Sharing Actions
             val shareActions = remember(isImage, isVideo, isAudio, selectedText, linkUrl) {
@@ -403,12 +404,20 @@ fun PetalLinkContextMenuSheet(
                 }
             }
 
-            shareActions.forEach { spec ->
-                ContextMenuItemRow(
-                    icon = spec.icon,
-                    title = spec.title,
-                    onClick = spec.onClick
-                )
+            Surface(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Column {
+                    shareActions.forEach { spec ->
+                        ContextMenuItemRow(
+                            icon = spec.icon,
+                            title = spec.title,
+                            onClick = spec.onClick
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(8.dp))

@@ -1,12 +1,14 @@
 package com.petal.browser.compose.menu
 
+import android.content.Intent
 import android.net.Uri
 import android.webkit.URLUtil
-import com.petal.browser.R
+import androidx.lifecycle.lifecycleScope
 import com.petal.browser.activity.BrowserActivity
-import com.petal.browser.compose.mlkit.PetalImageScannerBridge
 import com.petal.browser.database.Record
 import com.petal.browser.database.RecordAction
+import com.petal.browser.compose.mlkit.PetalImageScannerBridge
+import com.petal.browser.download.DownloadFileNameResolver
 import com.petal.browser.unit.BrowserUnit
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.unit.ImageActionHelper
@@ -17,6 +19,35 @@ import com.petal.browser.view.NinjaToast
  * Fulfills Material 3 Expressive menu handlers for image, link, and video targets.
  */
 object BrowserContextMenuManager {
+
+    /**
+     * Launches [targetUrl] in a second, independent Android window using freeform/
+     * adjacent multi-window mode (FLAG_ACTIVITY_NEW_TASK + MULTIPLE_TASK + LAUNCH_ADJACENT).
+     * BrowserActivity is declared singleTask in the manifest for its VIEW/BROWSABLE
+     * entry point, which on its own blocks a second instance; MULTIPLE_TASK is what
+     * overrides that and allows a genuinely separate task/window to be created here.
+     * Whether this actually renders as a floating/freeform window, a split-screen
+     * pane, or (on phones with no multi-window support) just focuses/reuses the
+     * existing window depends on the device and launcher - this requests freeform,
+     * it does not force it, since no such guarantee exists in the public API.
+     */
+    private fun launchInNewWindow(activity: BrowserActivity, targetUrl: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                setClass(activity, BrowserActivity::class.java)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT
+                )
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            // Freeform/adjacent launch not supported on this device/launcher -
+            // fall back to a normal foreground tab rather than doing nothing.
+            activity.addAlbum(HelperUnit.domain(targetUrl), targetUrl, true)
+        }
+    }
 
     @JvmStatic
     fun showImageContextMenu(activity: BrowserActivity, imageURL: String) {
@@ -44,12 +75,9 @@ object BrowserContextMenuManager {
                     activity.addAlbum(HelperUnit.domain(imageURL), imageURL, false, true)
                 }
 
-                override fun onOpenInNewWindow() {
-                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, true)
-                }
 
                 override fun onPreviewPage() {
-                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, true)
+                    PetalPagePreviewBridge.show(activity, imageURL)
                 }
 
                 override fun onCopyLinkAddress() {
@@ -69,9 +97,10 @@ object BrowserContextMenuManager {
 
                 override fun onDownloadLink() {
                     try {
-                        val fileName = HelperUnit.resolveFileName(imageURL, null, null)
-                        BrowserUnit.download(activity, imageURL, fileName, null)
-                        NinjaToast.show(activity, "Download started")
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, imageURL) { fileName, mimeType ->
+                            BrowserUnit.download(activity, imageURL, fileName, mimeType)
+                            NinjaToast.show(activity, "Download started")
+                        }
                     } catch (e: Exception) {
                         NinjaToast.show(activity, "Failed to start download")
                     }
@@ -89,7 +118,9 @@ object BrowserContextMenuManager {
                     try {
                         val action = RecordAction(activity)
                         action.open(true)
-                        action.addBookmark(Record(HelperUnit.domain(imageURL), imageURL, System.currentTimeMillis(), 0))
+                        val record = Record(HelperUnit.domain(imageURL), imageURL, System.currentTimeMillis(), 0)
+                        record.isReadingList = true
+                        action.addBookmark(record)
                         action.close()
                         NinjaToast.show(activity, "Added to reading list")
                     } catch (e: Exception) {
@@ -126,6 +157,21 @@ object BrowserContextMenuManager {
                 }
 
                 override fun onDownloadVideo() {}
+
+                override fun onViewInPetalViewer() {
+                    if (imageURL.isNotBlank()) {
+                        activity.runOnUiThread {
+                            val view = com.petal.browser.compose.downloads.PetalImageViewerBridge.createWebViewerView(
+                                activity,
+                                imageURL,
+                                HelperUnit.domain(imageURL)
+                            ) {
+                                activity.runOnUiThread { activity.performBackNavigation() }
+                            }
+                            activity.presentComposeScreen(view)
+                        }
+                    }
+                }
             }
         )
     }
@@ -153,24 +199,32 @@ object BrowserContextMenuManager {
                     } else null
 
                     if (existingGroup != null) {
+                        // addAlbumInGroup creates the new tab, then registers its real tab
+                        // ID (from setWebView's return value, not currentAlbumController)
+                        // into the existing group's persisted membership list.
                         activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, existingGroup.id, existingGroup.title)
                     } else {
-                        // Create a new group for current tab + new tab
-                        val currentTab = com.petal.browser.compose.tabs.PetalTabItem(
-                            id = currentTabId ?: "current_${System.currentTimeMillis()}",
-                            title = currentAlbum?.title ?: "Tab",
-                            url = currentAlbum?.url ?: "about:blank"
-                        )
-                        val newTabDummyId = "temp_${System.currentTimeMillis()}"
-                        val newTabDummy = com.petal.browser.compose.tabs.PetalTabItem(
-                            id = newTabDummyId,
-                            title = HelperUnit.domain(urlResult),
-                            url = urlResult
-                        )
-                        val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, newTabDummy)
-                        currentGeckoView?.setTabGroupId(newGroup.id)
-                        currentGeckoView?.setTabGroupTitle(newGroup.title)
-                        activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, newGroup.id, newGroup.title)
+                        // No group yet: create one seeded with the current tab, then open
+                        // the new tab and register its real ID into that same group. The
+                        // group is created with only the current tab as a member here -
+                        // addAlbumInGroup below adds the new tab once it actually exists,
+                        // rather than seeding the group with a placeholder ID for a tab
+                        // that doesn't exist yet.
+                        if (currentTabId != null) {
+                            val currentTab = com.petal.browser.compose.tabs.PetalTabItem(
+                                id = currentTabId,
+                                title = currentAlbum?.title ?: "Tab",
+                                url = currentAlbum?.url ?: "about:blank"
+                            )
+                            val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, currentTab)
+                            currentGeckoView?.setTabGroupId(newGroup.id)
+                            currentGeckoView?.setTabGroupTitle(newGroup.title)
+                            activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, newGroup.id, newGroup.title)
+                        } else {
+                            // No identifiable current tab to group with - fall back to a
+                            // plain new tab rather than creating a group with no real members.
+                            activity.addAlbum(HelperUnit.domain(urlResult), urlResult, false)
+                        }
                     }
                 }
 
@@ -178,12 +232,9 @@ object BrowserContextMenuManager {
                     activity.addAlbum(HelperUnit.domain(urlResult), urlResult, false, true)
                 }
 
-                override fun onOpenInNewWindow() {
-                    activity.addAlbum(HelperUnit.domain(urlResult), urlResult, true)
-                }
 
                 override fun onPreviewPage() {
-                    activity.addAlbum(activity.getString(R.string.app_name), urlResult, true)
+                    PetalPagePreviewBridge.show(activity, urlResult)
                 }
 
                 override fun onCopyLinkAddress() {
@@ -198,9 +249,10 @@ object BrowserContextMenuManager {
 
                 override fun onDownloadLink() {
                     try {
-                        val fileName = HelperUnit.resolveFileName(urlResult, null, null)
-                        BrowserUnit.download(activity, urlResult, fileName, null)
-                        NinjaToast.show(activity, "Download started")
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, urlResult) { fileName, mimeType ->
+                            BrowserUnit.download(activity, urlResult, fileName, mimeType)
+                            NinjaToast.show(activity, "Download started")
+                        }
                     } catch (e: Exception) {
                         NinjaToast.show(activity, "Failed to start download")
                     }
@@ -216,17 +268,13 @@ object BrowserContextMenuManager {
                     try {
                         val action = RecordAction(activity)
                         action.open(true)
-                        action.addBookmark(Record(HelperUnit.domain(urlResult), urlResult, System.currentTimeMillis(), 0))
+                        val record = Record(HelperUnit.domain(urlResult), urlResult, System.currentTimeMillis(), 0)
+                        record.isReadingList = true
+                        action.addBookmark(record)
                         action.close()
                         NinjaToast.show(activity, "Added to reading list")
                     } catch (e: Exception) {
                         e.printStackTrace()
-                    }
-                }
-
-                override fun onScanImage() {
-                    if (urlResult.isNotBlank()) {
-                        PetalImageScannerBridge.show(activity, urlResult)
                     }
                 }
 
@@ -238,6 +286,12 @@ object BrowserContextMenuManager {
 
                 override fun onShareLink() {
                     activity.shareLink(HelperUnit.domain(urlResult), urlResult)
+                }
+
+                override fun onScanImage() {
+                    if (urlResult.isNotBlank()) {
+                        PetalImageScannerBridge.show(activity, urlResult)
+                    }
                 }
 
                 override fun onSearchWithGoogleLens() {
@@ -296,9 +350,10 @@ object BrowserContextMenuManager {
 
                 override fun onDownloadVideo() {
                     try {
-                        val fileName = HelperUnit.resolveFileName(cleanVideoUrl, null, "video/mp4")
-                        BrowserUnit.download(activity, cleanVideoUrl, fileName, null)
-                        NinjaToast.show(activity, "Video download started")
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, cleanVideoUrl, fallbackMimeType = "video/mp4") { fileName, mimeType ->
+                            BrowserUnit.download(activity, cleanVideoUrl, fileName, mimeType)
+                            NinjaToast.show(activity, "Video download started")
+                        }
                     } catch (e: Exception) {
                         NinjaToast.show(activity, "Failed to start video download")
                     }
@@ -315,9 +370,6 @@ object BrowserContextMenuManager {
 
                 override fun onOpenInNewTabInGroup() {}
                 override fun onOpenInIncognitoTab() {}
-                override fun onOpenInNewWindow() {}
-                override fun onPreviewPage() {}
-                override fun onCopyLinkText() {}
                 override fun onDownloadLink() {}
                 override fun onOpenImageInNewTab() {}
                 override fun onCopyImage() {}
@@ -348,9 +400,10 @@ object BrowserContextMenuManager {
 
                 override fun onDownloadAudio() {
                     try {
-                        val fileName = HelperUnit.resolveFileName(audioUrl, null, "audio/*")
-                        BrowserUnit.download(activity, audioUrl, fileName, null)
-                        NinjaToast.show(activity, "Audio download started")
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, audioUrl) { fileName, mimeType ->
+                            BrowserUnit.download(activity, audioUrl, fileName, mimeType)
+                            NinjaToast.show(activity, "Audio download started")
+                        }
                     } catch (e: Exception) {
                         NinjaToast.show(activity, "Failed to start audio download")
                     }
