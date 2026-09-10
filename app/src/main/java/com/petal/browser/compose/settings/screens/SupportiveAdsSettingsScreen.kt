@@ -68,9 +68,10 @@ fun SupportiveAdsSettingsScreen(
                     cardId = "ads_supportive",
                     targetHighlightId = targetHighlightItemId
                 ) {
-                    SettingsSwitchRow(
+                    ToggleRow(
                         title = "Enable Supportive Ads",
                         subtitle = "Displays an unobtrusive banner on the home screen to support development",
+                        icon = Icons.Rounded.VolunteerActivism,
                         checked = isSupportiveAdsEnabled,
                         onCheckedChange = { enabled ->
                             isSupportiveAdsEnabled = enabled
