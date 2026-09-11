@@ -34,6 +34,10 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <!-- Security & Biometrics (WebAuthn / Passkeys) -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -96,11 +100,6 @@
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
-
-        <!-- Google AdMob App ID -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="@string/admob_app_id" />
 
         <!-- AppLocales Metadata Holder Service for AppCompat auto-store locales -->
         <service
@@ -166,7 +165,7 @@
                 <!-- Verpflichtend, damit Android die URI unabhängig vom Namen an die App übergibt -->
                 <data android:mimeType="*/*" />
             </intent-filter>
-
+            
             <!-- Firefox WebExtension package import (.xpi). This makes Petal a native
                  target for extension packages shared from Downloads/file managers.
                  Each <data> tag must carry its own scheme+mimeType together - splitting
@@ -206,6 +205,28 @@
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
+            </intent-filter>
+
+            <!-- Open PDF files in Petal's built-in Material 3 Expressive PDF viewer (ACTION_VIEW) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/pdf" />
+                <data android:scheme="file" android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.pdf" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.pdf" />
+            </intent-filter>
+
+            <!-- Receive shared PDF documents from other apps (ACTION_SEND application/pdf) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
             </intent-filter>
 
             <!-- Text über das Android 'Teilen'-Menü empfangen -->
@@ -249,6 +270,15 @@
         <receiver
             android:name="com.petal.browser.compose.downloads.PetalDownloadCancelReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name="com.petal.browser.unit.PetalUpdateInstallerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
 
 
         <receiver
