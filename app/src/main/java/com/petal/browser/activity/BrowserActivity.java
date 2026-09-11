@@ -601,7 +601,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
             View addressBar = findViewById(R.id.compose_address_bar);
             if (addressBar != null) {
-                addressBar.setPadding(0, systemBars.top, 0, 0);
+                boolean isBottomBar = "BOTTOM".equalsIgnoreCase(sp.getString("sp_address_bar_position", "TOP"));
+                addressBar.setPadding(0, isBottomBar ? 0 : systemBars.top, 0, 0);
             }
 
             View bottomNavContainer = findViewById(R.id.bottom_nav_container);
@@ -659,6 +660,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
         if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
         }
 
         // Chrome-style Tab Session Restoration & Rehydration
@@ -1986,6 +1988,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 boolean isAddressBarVisible = addressBar.getVisibility() != GONE;
 
                 if (isBottom) {
+                    addressBar.setPadding(0, 0, 0, 0);
                     boolean hasBottomNav = bottomNavContainer != null && bottomNavContainer.getVisibility() != GONE;
                     if (hasBottomNav) {
                         addrParams.addRule(RelativeLayout.ABOVE, R.id.bottom_nav_container);
@@ -2000,11 +2003,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     }
 
                     contentParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-                    if (isAddressBarVisible) {
-                        contentParams.addRule(RelativeLayout.ABOVE, R.id.compose_address_bar);
-                    } else {
-                        contentParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-                    }
+                    contentParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
 
                     if (downloadBanner != null && downloadBanner.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
                         RelativeLayout.LayoutParams bannerParams = (RelativeLayout.LayoutParams) downloadBanner.getLayoutParams();
@@ -2023,6 +2022,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         fabBubble.setLayoutParams(bubbleParams);
                     }
                 } else {
+                    View decorView = getWindow().getDecorView();
+                    androidx.core.view.WindowInsetsCompat rootInsets = ViewCompat.getRootWindowInsets(decorView);
+                    if (rootInsets != null) {
+                        Insets sysBars = rootInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                        addressBar.setPadding(0, sysBars.top, 0, 0);
+                    }
                     addrParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                     addrParams.topMargin = 0;
                     addrParams.bottomMargin = 0;
@@ -2088,6 +2093,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 // especially important when switching to bottom position from settings.
                 View root = addressBar.getParent() instanceof View ? (View) addressBar.getParent() : null;
                 if (root != null) root.requestLayout();
+                addressBar.setElevation(HelperUnit.convertDpToPixel(24f, context));
                 addressBar.bringToFront();
                 addressBar.requestLayout();
                 mainContent.requestLayout();
