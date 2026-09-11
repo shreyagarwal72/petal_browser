@@ -242,7 +242,7 @@ private fun RenderCategoryContent(
             DisplaySettingsScreen(targetHighlightItemId = targetHighlightItemId, onNavigateBack = onNavigateBack)
         }
         SettingsCategory.EXPERIMENTAL -> {
-            ExperimentalSettingsScreen(targetHighlightItemId = targetHighlightItemId, onNavigateBack = onNavigateBack)
+            ExperimentalSettingsScreen(onNavigateBack = onNavigateBack)
         }
         SettingsCategory.TABS -> {
             TabsSettingsScreen(
