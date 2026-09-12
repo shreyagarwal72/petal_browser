@@ -182,4 +182,9 @@
     <string name="action_simulate_crash">Simulate Crash</string>
     <string name="action_export_logs">Export Logs (.zip)</string>
     <string name="crash_toast_recovered">Petal recovered from a crash. Diagnostic report saved.</string>
+
+    <!-- Standalone Viewers & Players -->
+    <string name="petal_pdf_viewer_name">Petal PDF Viewer</string>
+    <string name="petal_image_viewer_name">Petal Image Viewer</string>
+    <string name="petal_media_player_name">Petal Media Player</string>
 </resources>
