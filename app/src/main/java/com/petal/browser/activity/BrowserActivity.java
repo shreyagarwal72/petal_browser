@@ -908,7 +908,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             dispatchIntent(getIntent());
         }
         View bottomNavContainer = findViewById(R.id.bottom_nav_container);
-        if (bottomNavContainer != null) {
+        if (bottomNavContainer != null && (getIntent() == null || !getIntent().getBooleanExtra("pwa_mode", false))) {
             bottomNavContainer.setTranslationY(0f);
             bottomNavContainer.setVisibility(View.VISIBLE);
         }
@@ -2528,9 +2528,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         // Restore address bar and persistent bottom nav
         try {
-            View addressBar = findViewById(R.id.compose_address_bar);
-            if (addressBar != null) addressBar.setVisibility(VISIBLE);
-            updatePersistentBottomNav();
+            if (getIntent() == null || !getIntent().getBooleanExtra("pwa_mode", false)) {
+                View addressBar = findViewById(R.id.compose_address_bar);
+                if (addressBar != null) addressBar.setVisibility(VISIBLE);
+                updatePersistentBottomNav();
+            }
         } catch (Exception ignored) {}
 
         contentFrame.requestFocus();
@@ -3359,7 +3361,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             isAddressBarCollapsed = false;
         } else {
             if (composeAddressBar != null) {
-                composeAddressBar.setVisibility(VISIBLE);
+                boolean isPwa = getIntent() != null && getIntent().getBooleanExtra("pwa_mode", false);
+                composeAddressBar.setVisibility(isPwa ? GONE : VISIBLE);
                 composeAddressBar.setTranslationY(0f);
             }
             if (contentFrame != null) contentFrame.setTranslationY(0f);
