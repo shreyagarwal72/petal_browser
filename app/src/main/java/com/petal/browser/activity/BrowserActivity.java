@@ -3875,6 +3875,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             updatePersistentBottomNav();
             updateOmniBox();
         }
+        com.petal.browser.extensions.PetalExtensionManager.INSTANCE.dismissPopup();
     }
 
     public void showCreditsScreen() {
