@@ -398,6 +398,13 @@ object PetalSettingsSearchIndex {
             category = SettingsCategory.MISCELLANEOUS,
             keywords = listOf("external apps", "open in apps", "native apps", "youtube app", "deep links", "intent", "open url in app")
         ),
+        SettingsSearchItem(
+            id = "misc_updates",
+            title = "App Updates & Google Play",
+            subtitle = "Check for Google Play Store updates and configure automatic launch update checks",
+            category = SettingsCategory.MISCELLANEOUS,
+            keywords = listOf("update", "play store", "app updates", "check for updates", "google play", "in-app update", "new version")
+        ),
 
         // ==================== DATA & BACKUP ====================
         SettingsSearchItem(
