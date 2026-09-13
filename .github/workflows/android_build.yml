@@ -115,19 +115,7 @@ jobs:
 
               # Strip any pre-existing META-INF signature files (e.g. from Gradle's bundleRelease signingConfig)
               # so the App Bundle only has exactly 1 certificate chain
-              python3 -c "
-import zipfile, os, sys
-aab_path = sys.argv[1]
-temp_path = aab_path + '.clean'
-with zipfile.ZipFile(aab_path, 'r') as zin:
-    with zipfile.ZipFile(temp_path, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
-        for item in zin.infolist():
-            fn = item.filename
-            if fn.startswith('META-INF/') and any(fn.endswith(ext) for ext in ['.SF', '.RSA', '.DSA', '.EC', '.MF']):
-                continue
-            zout.writestr(item, zin.read(fn))
-os.replace(temp_path, aab_path)
-" "$final_aab"
+              python3 .github/scripts/strip_aab_signatures.py "$final_aab"
 
               jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
                 -keystore /tmp/signing.keystore \
