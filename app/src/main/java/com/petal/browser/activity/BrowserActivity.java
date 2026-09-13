@@ -1655,6 +1655,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 geckoView.setOnScrollChangeListener(new com.petal.browser.view.PetalGeckoView.OnScrollChangeListener() {
                     @Override
                     public void onScrollDown() {
+                        animateAddressBarCollapse(true);
                         View bottomNavContainer = findViewById(R.id.bottom_nav_container);
                         if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
                             springTranslateY(bottomNavContainer, bottomNavContainer.getHeight(), androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
@@ -1663,6 +1664,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                     @Override
                     public void onScrollUp() {
+                        animateAddressBarCollapse(false);
                         View bottomNavContainer = findViewById(R.id.bottom_nav_container);
                         if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
                             springTranslateY(bottomNavContainer, 0f, androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
@@ -1691,6 +1693,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 ninjaWebView.setOnScrollChangeListener(new NinjaWebView.OnScrollChangeListener() {
                     @Override
                     public void onScrollDown() {
+                        animateAddressBarCollapse(true);
                         View bottomNavContainer = findViewById(R.id.bottom_nav_container);
                         if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
                             springTranslateY(bottomNavContainer, bottomNavContainer.getHeight(), androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
@@ -1699,6 +1702,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                     @Override
                     public void onScrollUp() {
+                        animateAddressBarCollapse(false);
                         View bottomNavContainer = findViewById(R.id.bottom_nav_container);
                         if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
                             springTranslateY(bottomNavContainer, 0f, androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
@@ -1910,14 +1914,22 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     }
 
                     boolean hasBottomNav = bottomNavContainer != null && bottomNavContainer.getVisibility() != GONE;
+                    boolean isFloating = sp.getBoolean("sp_floating_tab_bar", true);
                     addrParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                     if (hasBottomNav) {
-                        int navHeight = bottomNavContainer.getHeight();
-                        if (navHeight <= 0) {
-                            navHeight = (int) HelperUnit.convertDpToPixel(64f, context);
-                        }
-                        addrParams.bottomMargin = navHeight + (int) HelperUnit.convertDpToPixel(2f, context);
+                        int expectedNavHeight = (int) HelperUnit.convertDpToPixel(isFloating ? 76f : 72f, context) + navBarBottomInset;
+                        int navHeight = Math.max(bottomNavContainer.getHeight(), expectedNavHeight);
+                        addrParams.bottomMargin = navHeight + (int) HelperUnit.convertDpToPixel(4f, context);
                         addressBar.setPadding(0, 0, 0, 0);
+
+                        // If bottomNavContainer is not measured yet, schedule re-alignment
+                        if (bottomNavContainer.getHeight() <= 0) {
+                            bottomNavContainer.post(() -> {
+                                if (!isFinishing() && !isDestroyed()) {
+                                    applyAddressBarPosition();
+                                }
+                            });
+                        }
                     } else {
                         addrParams.bottomMargin = 0;
                         addressBar.setPadding(0, 0, 0, navBarBottomInset);
@@ -2913,8 +2925,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         if (isHomePage(currentUrl) || isOverlayScreenShowing) {
             composeAddressBar.setVisibility(GONE);
+            isAddressBarCollapsed = false;
+            View fab_bubble = findViewById(R.id.fab_bubble);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
             return;
         } else {
+            isAddressBarCollapsed = false;
+            View fab_bubble = findViewById(R.id.fab_bubble);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
             composeAddressBar.setVisibility(VISIBLE);
             composeAddressBar.bringToFront();
             composeAddressBar.setTranslationY(0f);
