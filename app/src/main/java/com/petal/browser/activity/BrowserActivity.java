@@ -455,6 +455,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         sp = PreferenceManager.getDefaultSharedPreferences(context);
         com.petal.browser.unit.PetalSessionHistoryManager.initSession();
         com.petal.browser.extensions.PetalExtensionManager.attach(context);
+        com.petal.browser.extensions.PetalBuiltInExtensionManager.installAll(context);
         com.petal.browser.extensions.PetalExtensionManager.setPopupRequestListener(popup -> {
             runOnUiThread(() -> showExtensionPopup(popup));
         });

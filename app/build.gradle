@@ -167,6 +167,12 @@ dependencies {
     // Hidden API bypass for non-SDK interface access (e.g. GeckoThread on Android 15/16)
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
 
+    // yt-dlp (via youtubedl-android) — powers Petal Social Downloader for YouTube,
+    // Instagram, TikTok, Twitter/X, Facebook, Reddit, and 1800+ more platforms.
+    implementation 'io.github.junkfood02.youtubedl-android:library:0.17.3'
+    implementation 'io.github.junkfood02.youtubedl-android:ffmpeg:0.17.3'
+    implementation 'io.github.junkfood02.youtubedl-android:aria2c:0.17.3'
+
     // Mozilla GeckoView (Release channel, stable 154 train)
     // Avoid unverified snapshots (such as 155.0.20260903215306) which trigger libxul.so SIGSEGV on Android 16.
     implementation 'org.mozilla.geckoview:geckoview:155.0.20260903215306'

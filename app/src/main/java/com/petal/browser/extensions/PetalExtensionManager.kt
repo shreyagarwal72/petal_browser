@@ -21,6 +21,10 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
+import com.petal.browser.browser.AlbumController
+import com.petal.browser.browser.BrowserContainer
+import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.activity.BrowserActivity
 
 /**
  * PetalExtensionManager
@@ -62,7 +66,9 @@ object PetalExtensionManager {
     data class PendingPopup(
         val extensionId: String,
         val extensionName: String,
-        val session: GeckoSession
+        val session: GeckoSession,
+        /** The real browsing tab that opened this popup, when Gecko supplied one. */
+        val sourceSession: GeckoSession? = null
     )
 
     data class InstalledExtension(
@@ -103,72 +109,86 @@ object PetalExtensionManager {
         CatalogEntry(
             id = "ublock-origin",
             name = "uBlock Origin",
-            description = "Efficient, wide-spectrum ad & tracker content blocker.",
+            description = "Efficient, wide-spectrum ad & tracker content blocker. Blocks ads, popups, trackers, and malware sites.",
             amoSlug = "ublock-origin",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/ublock-origin/"
         ),
         CatalogEntry(
             id = "darkreader",
             name = "Dark Reader",
-            description = "Dark mode for every website, with brightness & contrast controls.",
+            description = "Inverts bright web page colors to custom dark mode for comfortable night browsing.",
             amoSlug = "darkreader",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/darkreader/"
         ),
         CatalogEntry(
             id = "privacy-badger17",
             name = "Privacy Badger",
-            description = "Automatically learns to block invisible trackers.",
+            description = "Automatically learns to block invisible tracking scripts as you browse.",
             amoSlug = "privacy-badger17",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/privacy-badger17/"
         ),
         CatalogEntry(
+            id = "sponsorblock",
+            name = "SponsorBlock for YouTube",
+            description = "Skip YouTube video sponsors, intros, outros, and subscribe reminders automatically.",
+            amoSlug = "sponsorblock",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/sponsorblock/"
+        ),
+        CatalogEntry(
+            id = "traduzir-paginas-web",
+            name = "Translate Web Pages",
+            description = "Translates entire web pages in real-time using Google Translate or DeepL.",
+            amoSlug = "traduzir-paginas-web",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/traduzir-paginas-web/"
+        ),
+        CatalogEntry(
+            id = "clearurls",
+            name = "ClearURLs",
+            description = "Removes tracking elements and parameters from URLs to protect your privacy.",
+            amoSlug = "clearurls",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/clearurls/"
+        ),
+        CatalogEntry(
+            id = "violentmonkey",
+            name = "Violentmonkey",
+            description = "Provides userscript support to customize and automate website behavior.",
+            amoSlug = "violentmonkey",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/violentmonkey/"
+        ),
+        CatalogEntry(
+            id = "decentraleyes",
+            name = "Decentraleyes",
+            description = "Emulates CDNs locally to prevent tracking by large content delivery providers.",
+            amoSlug = "decentraleyes",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/decentraleyes/"
+        ),
+        CatalogEntry(
             id = "bitwarden-password-manager",
             name = "Bitwarden Password Manager",
-            description = "Secure password, passkey, and vault manager.",
+            description = "Secure, open source password manager. Store, generate, and auto-fill logins.",
             amoSlug = "bitwarden-password-manager",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/bitwarden-password-manager/"
         ),
         CatalogEntry(
+            id = "proton-pass",
+            name = "Proton Pass",
+            description = "End-to-end encrypted password manager and email alias generator from Proton.",
+            amoSlug = "proton-pass",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/proton-pass/"
+        ),
+        CatalogEntry(
+            id = "keepassxc-browser",
+            name = "KeePassXC-Browser",
+            description = "Official browser integration for KeePassXC password manager.",
+            amoSlug = "keepassxc-browser",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/keepassxc-browser/"
+        ),
+        CatalogEntry(
             id = "istilldontcareaboutcookies",
             name = "I still don't care about cookies",
-            description = "Automatically dismisses cookie consent popups.",
+            description = "Automatically dismisses cookie consent banners and popups.",
             amoSlug = "istilldontcareaboutcookies",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/istilldontcareaboutcookies/"
-        ),
-        CatalogEntry(
-            id = "youtube-high-definition",
-            name = "YouTube High Definition",
-            description = "Automatically plays YouTube videos in HD, resizes the player, and adds auto-stop and mute.",
-            amoSlug = "youtube-high-definition",
-            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/youtube-high-definition/"
-        ),
-        CatalogEntry(
-            id = "view-page-archive",
-            name = "Web Archives",
-            description = "View archived and cached versions of web pages, such as the Wayback Machine and Archive.is.",
-            amoSlug = "view-page-archive",
-            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/view-page-archive/"
-        ),
-        CatalogEntry(
-            id = "tomato-clock",
-            name = "Tomato Clock",
-            description = "A simple Pomodoro-style timer for managing your productivity.",
-            amoSlug = "tomato-clock",
-            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/tomato-clock/"
-        ),
-        CatalogEntry(
-            id = "video-background-play-fix",
-            name = "Video Background Play Fix",
-            description = "Keeps videos playing in the background by blocking the Page Visibility and Fullscreen APIs.",
-            amoSlug = "video-background-play-fix",
-            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/video-background-play-fix/"
-        ),
-        CatalogEntry(
-            id = "google-search-fixer",
-            name = "Google Search Fixer",
-            description = "Overrides the user-agent on Google Search so it serves the Chrome-style search experience.",
-            amoSlug = "google-search-fixer",
-            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/google-search-fixer/"
         ),
         CatalogEntry(
             id = "cookie-editor",
@@ -183,6 +203,41 @@ object PetalExtensionManager {
             description = "Blocks ads and pop-ups on Facebook, YouTube, and every other website.",
             amoSlug = "adguard-adblocker",
             amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/adguard-adblocker/"
+        ),
+        CatalogEntry(
+            id = "video-background-play-fix",
+            name = "Video Background Play Fix",
+            description = "Keeps videos playing in the background by blocking the Page Visibility API.",
+            amoSlug = "video-background-play-fix",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/video-background-play-fix/"
+        ),
+        CatalogEntry(
+            id = "youtube-high-definition",
+            name = "YouTube High Definition",
+            description = "Automatically plays YouTube videos in HD and adds auto-stop and mute features.",
+            amoSlug = "youtube-high-definition",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/youtube-high-definition/"
+        ),
+        CatalogEntry(
+            id = "view-page-archive",
+            name = "Web Archives",
+            description = "View archived and cached versions of web pages via Wayback Machine and Archive.is.",
+            amoSlug = "view-page-archive",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/view-page-archive/"
+        ),
+        CatalogEntry(
+            id = "google-search-fixer",
+            name = "Google Search Fixer",
+            description = "Overrides the user-agent on Google Search to serve the standard desktop experience.",
+            amoSlug = "google-search-fixer",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/google-search-fixer/"
+        ),
+        CatalogEntry(
+            id = "tomato-clock",
+            name = "Tomato Clock",
+            description = "A simple Pomodoro-style timer for managing focus and productivity sessions.",
+            amoSlug = "tomato-clock",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/tomato-clock/"
         )
     )
 
@@ -218,6 +273,51 @@ object PetalExtensionManager {
 
     /** Latest default browser/page action for each installed extension. */
     private val actionByExtensionId = mutableMapOf<String, WebExtension.Action>()
+    /** Per-tab actions are important for extensions such as uBlock that expose different
+     * state/badges depending on the current website. */
+    private val sessionActionByExtensionId = java.util.concurrent.ConcurrentHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
+
+    private fun rememberAction(extension: WebExtension, session: GeckoSession?, action: WebExtension.Action) {
+        // GeckoView may deliver the action with the originating tab session. Keep the
+        // per-session action authoritative so a stale action from another tab cannot be
+        // clicked when the user opens an extension from the current tab.
+        if (session != null) {
+            sessionActionByExtensionId
+                .computeIfAbsent(session) { java.util.concurrent.ConcurrentHashMap() }[extension.id] = action
+        } else {
+            synchronized(actionByExtensionId) { actionByExtensionId[extension.id] = action }
+        }
+    }
+
+    /**
+     * Keeps GeckoView's WebExtension tab dispatcher in sync with Petal's foreground tab.
+     * This is required for Action.click()/tabs APIs to target the same tab the user sees.
+     */
+    @JvmStatic
+    fun setActiveBrowserSession(oldSession: GeckoSession?, newSession: GeckoSession?) {
+        val ctx = appContext ?: return
+        val controller = try {
+            PetalGeckoRuntime.getOrCreate(ctx).webExtensionController
+        } catch (t: Throwable) {
+            Log.w(TAG, "Unable to access WebExtensionController while changing active tab", t)
+            return
+        }
+
+        if (oldSession != null && oldSession !== newSession && oldSession.isOpen) {
+            try { controller.setTabActive(oldSession, false) }
+            catch (t: Throwable) { Log.d(TAG, "Failed to deactivate extension tab session", t) }
+        }
+        if (newSession != null && newSession.isOpen) {
+            try {
+                // Make sure delegates exist even when the tab was created before the
+                // extension list finished loading during a cold start.
+                attachSession(newSession)
+                controller.setTabActive(newSession, true)
+            } catch (t: Throwable) {
+                Log.d(TAG, "Failed to activate extension tab session", t)
+            }
+        }
+    }
 
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
@@ -300,6 +400,7 @@ object PetalExtensionManager {
         controller.setAddonManagerDelegate(object : WebExtensionController.AddonManagerDelegate {
             override fun onInstalled(extension: WebExtension) {
                 attachActionDelegate(extension)
+                attachExtensionToOpenSessions(extension)
                 refresh()
             }
 
@@ -319,12 +420,14 @@ object PetalExtensionManager {
             override fun onEnabling(extension: WebExtension) { refresh() }
             override fun onEnabled(extension: WebExtension) {
                 attachActionDelegate(extension)
+                attachExtensionToOpenSessions(extension)
                 refresh()
             }
             override fun onDisabling(extension: WebExtension) { refresh() }
             override fun onDisabled(extension: WebExtension) { refresh() }
             override fun onReady(extension: WebExtension) {
                 attachActionDelegate(extension)
+                attachExtensionToOpenSessions(extension)
                 refresh()
             }
         })
@@ -366,7 +469,7 @@ object PetalExtensionManager {
                     session: GeckoSession?,
                     action: WebExtension.Action
                 ) {
-                    synchronized(actionByExtensionId) { actionByExtensionId[ext.id] = action }
+                    rememberAction(ext, session, action)
                 }
 
                 override fun onPageAction(
@@ -374,7 +477,7 @@ object PetalExtensionManager {
                     session: GeckoSession?,
                     action: WebExtension.Action
                 ) {
-                    synchronized(actionByExtensionId) { actionByExtensionId[ext.id] = action }
+                    rememberAction(ext, session, action)
                 }
 
                 override fun onOpenPopup(
@@ -396,47 +499,112 @@ object PetalExtensionManager {
      * Attaches action delegates for all active extensions to a given tab's GeckoSession,
      * connecting tab-specific extension actions and badges to the active browsing context.
      */
-    @JvmStatic
-    fun attachSession(session: GeckoSession?) {
-        if (session == null) return
-        val exts = _extensions.value
-        for (extItem in exts) {
-            val ext = extItem.raw
+    private fun attachExtensionToOpenSessions(extension: WebExtension) {
+        val ctx = appContext ?: return
+        BrowserContainer.list().forEach { controller ->
+            val gecko = controller as? PetalGeckoView ?: return@forEach
+            val session = gecko.session
+            if (!session.isOpen) return@forEach
             try {
-                session.webExtensionController.setActionDelegate(ext, object : WebExtension.ActionDelegate {
-                    override fun onBrowserAction(
-                        ext: WebExtension,
-                        geckoSession: GeckoSession?,
-                        action: WebExtension.Action
-                    ) {
-                        synchronized(actionByExtensionId) { actionByExtensionId[ext.id] = action }
+                session.webExtensionController.setActionDelegate(extension, object : WebExtension.ActionDelegate {
+                    override fun onBrowserAction(ext: WebExtension, eventSession: GeckoSession?, action: WebExtension.Action) {
+                        rememberAction(ext, eventSession ?: session, action)
                     }
-
-                    override fun onPageAction(
-                        ext: WebExtension,
-                        geckoSession: GeckoSession?,
-                        action: WebExtension.Action
-                    ) {
-                        synchronized(actionByExtensionId) { actionByExtensionId[ext.id] = action }
+                    override fun onPageAction(ext: WebExtension, eventSession: GeckoSession?, action: WebExtension.Action) {
+                        rememberAction(ext, eventSession ?: session, action)
                     }
-
-                    override fun onOpenPopup(
-                        ext: WebExtension,
-                        action: WebExtension.Action
-                    ): GeckoResult<GeckoSession>? = createPopupSession(ext)
-
-                    override fun onTogglePopup(
-                        ext: WebExtension,
-                        action: WebExtension.Action
-                    ): GeckoResult<GeckoSession>? = createPopupSession(ext)
+                    override fun onOpenPopup(ext: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? = createPopupSession(ext, session)
+                    override fun onTogglePopup(ext: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? = createPopupSession(ext, session)
                 })
-            } catch (e: Exception) {
-                Log.d(TAG, "Failed to attach session action delegate for ${ext.id}", e)
+                session.webExtensionController.setTabDelegate(extension, createSessionTabDelegate(ctx))
+            } catch (t: Throwable) {
+                Log.d(TAG, "Failed to attach newly-installed extension ${extension.id} to tab", t)
             }
         }
     }
 
-    private fun createPopupSession(extension: WebExtension): GeckoResult<GeckoSession>? {
+    /**
+     * Gecko's SessionTabDelegate is the missing piece between a WebExtension popup and
+     * Petal's real tab model. Without it, APIs such as browser.tabs.update/remove can
+     * execute in Gecko but have no effect on the visible Petal tab.
+     */
+    private fun createSessionTabDelegate(context: Context): WebExtension.SessionTabDelegate {
+        return object : WebExtension.SessionTabDelegate {
+            override fun onCloseTab(extension: WebExtension?, session: GeckoSession): GeckoResult<AllowOrDeny> {
+                Handler(Looper.getMainLooper()).post {
+                    try {
+                        val activity = findBrowserActivity(context) ?: return@post
+                        val controller = BrowserContainer.list().firstOrNull {
+                            (it as? PetalGeckoView)?.session === session
+                        }
+                        if (controller != null) activity.removeAlbum(controller)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Extension tab close request failed", t)
+                    }
+                }
+                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+            }
+
+            override fun onUpdateTab(
+                extension: WebExtension,
+                session: GeckoSession,
+                details: WebExtension.UpdateTabDetails
+            ): GeckoResult<AllowOrDeny> {
+                Handler(Looper.getMainLooper()).post {
+                    try {
+                        val activity = findBrowserActivity(context) ?: return@post
+                        val controller = BrowserContainer.list().firstOrNull {
+                            (it as? PetalGeckoView)?.session === session
+                        }
+                        val gecko = controller as? PetalGeckoView
+                        if (gecko != null) {
+                            details.url?.takeIf { it.isNotBlank() }?.let(gecko::loadUrl)
+                            if (details.active == true) activity.showAlbum(gecko)
+                        }
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Extension tab update request failed", t)
+                    }
+                }
+                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+            }
+        }
+    }
+
+    private fun attachTabDelegate(session: GeckoSession, context: Context) {
+        for (extItem in _extensions.value) {
+            try {
+                session.webExtensionController.setTabDelegate(extItem.raw, createSessionTabDelegate(context))
+            } catch (t: Throwable) {
+                Log.d(TAG, "Failed to attach tab delegate for ${extItem.id}", t)
+            }
+        }
+    }
+
+    @JvmStatic
+    fun attachSession(session: GeckoSession?) {
+        if (session == null) return
+        val ctx = appContext ?: return
+        for (extItem in _extensions.value) {
+            val ext = extItem.raw
+            try {
+                session.webExtensionController.setActionDelegate(ext, object : WebExtension.ActionDelegate {
+                    override fun onBrowserAction(ext: WebExtension, geckoSession: GeckoSession?, action: WebExtension.Action) {
+                        rememberAction(ext, geckoSession ?: session, action)
+                    }
+                    override fun onPageAction(ext: WebExtension, geckoSession: GeckoSession?, action: WebExtension.Action) {
+                        rememberAction(ext, geckoSession ?: session, action)
+                    }
+                    override fun onOpenPopup(ext: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? = createPopupSession(ext, session)
+                    override fun onTogglePopup(ext: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? = createPopupSession(ext, session)
+                })
+                session.webExtensionController.setTabDelegate(ext, createSessionTabDelegate(ctx))
+            } catch (e: Exception) {
+                Log.d(TAG, "Failed to attach extension delegates for ${ext.id}", e)
+            }
+        }
+    }
+
+    private fun createPopupSession(extension: WebExtension, sourceSession: GeckoSession? = null): GeckoResult<GeckoSession>? {
         _pendingPopup.value?.session?.let { existing ->
             try {
                 existing.setActive(false)
@@ -445,23 +613,72 @@ object PetalExtensionManager {
         }
         _pendingPopup.value = null
 
-        val popupSession = GeckoSession()
-        val ctx = appContext
-        if (ctx != null) {
-            val runtime = PetalGeckoRuntime.getOrCreate(ctx)
-            if (!popupSession.isOpen) {
-                popupSession.open(runtime)
+        // GeckoView's ActionDelegate contract requires the session returned from
+        // onOpenPopup/onTogglePopup to be UNUSED/UNOPENED. Opening it here causes
+        // "Must use an unopened GeckoSession instance" on newer GeckoView builds.
+        // The popup Compose host opens the session after GeckoView accepts it.
+        val popupSettings = org.mozilla.geckoview.GeckoSessionSettings.Builder()
+            .usePrivateMode(false)
+            .allowJavascript(true)
+            .viewportMode(org.mozilla.geckoview.GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
+            .build()
+        val popupSession = GeckoSession(popupSettings)
+
+        // Inject mobile-responsive CSS when the extension popup page finishes loading.
+        // Without this, many extension popups (uBlock Origin, Bitwarden, AdGuard, etc.)
+        // render at their desktop fixed width and overflow the phone screen.
+        popupSession.progressDelegate = object : GeckoSession.ProgressDelegate {
+            override fun onPageStop(session: GeckoSession, success: Boolean) {
+                injectExtensionPopupResponsiveFix(session)
             }
         }
+
         val popup = PendingPopup(
             extensionId = extension.id,
             extensionName = extension.metaData.name ?: extension.id,
-            session = popupSession
+            session = popupSession,
+            sourceSession = sourceSession
         )
         _pendingPopup.value = popup
         notifyPopupRequested(popup)
         return GeckoResult.fromValue(popupSession)
     }
+
+    /** Injects a mobile-responsive CSS + viewport fix into extension popup sessions.
+     *  Matches omni's injectExtensionPopupResponsiveFix so all extension popups look
+     *  correct on phone-sized screens instead of overflowing at their desktop widths. */
+    private fun injectExtensionPopupResponsiveFix(session: GeckoSession) {
+        val js = """
+            (function() {
+                try {
+                    var existing = document.querySelector('meta[name="viewport"]');
+                    if (!existing) {
+                        var meta = document.createElement('meta');
+                        meta.name    = 'viewport';
+                        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes';
+                        (document.head || document.documentElement).appendChild(meta);
+                    } else if (!existing.content || existing.content.indexOf('width=device-width') === -1) {
+                        existing.content = 'width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes';
+                    }
+                    if (document.getElementById('petal-ext-popup-responsive')) return;
+                    var style = document.createElement('style');
+                    style.id = 'petal-ext-popup-responsive';
+                    style.innerHTML = [
+                        'html, body { max-width: 100vw !important; width: 100% !important; min-width: unset !important; overflow-x: hidden !important; box-sizing: border-box !important; }',
+                        '*, *::before, *::after { box-sizing: border-box !important; }',
+                        '.container, .wrapper, .content, .inner, .card, .panel, .notification, .popup, .popup-container, .popup-inner, .app, .app-container, .main, main, [role="main"], [class*="container"], [class*="wrapper"], [class*="card"], [class*="notification"], [class*="popup"], [class*="panel"], [class*="dialog"], [class*="modal"], [id*="container"], [id*="wrapper"], [id*="notification"], [id*="popup"] { max-width: calc(100vw - 8px) !important; width: auto !important; min-width: unset !important; margin-left: auto !important; margin-right: auto !important; overflow-x: hidden !important; }',
+                        'button, input, select, textarea, a { max-width: 100% !important; word-break: break-word !important; }',
+                        '[style*="position: fixed"], [style*="position:fixed"] { max-width: 100vw !important; width: 100% !important; left: 0 !important; right: 0 !important; }'
+                    ].join(' ');
+                    (document.head || document.documentElement).appendChild(style);
+                } catch(e) {}
+            })();
+        """.trimIndent().replace("\n", " ")
+        try {
+            session.loadUri("javascript:$js")
+        } catch (ignored: Exception) {}
+    }
+
 
     @JvmStatic
     fun dismissPopup() {
@@ -490,13 +707,34 @@ object PetalExtensionManager {
         }
         if (!extItem.enabled) return
         val rawExt = extItem.raw
-        val ctx = context ?: appContext
+        val ctx = context ?: appContext ?: return
 
         // 1. Try action.click() if an action was captured and registered
-        val action = synchronized(actionByExtensionId) { actionByExtensionId[extensionId] }
+        val activeSession = currentBrowserSession(ctx)
+        val sessionAction = activeSession?.let { sessionActionByExtensionId[it]?.get(extensionId) }
+        val fallbackAction = synchronized(actionByExtensionId) { actionByExtensionId[extensionId] }
+
+        // Prefer the action belonging to the visible tab. Only use the global action when
+        // there is no live active tab action at all (for example during very early startup).
+        val action = sessionAction ?: if (activeSession == null) fallbackAction else null
         if (action != null) {
             try {
                 action.click()
+                // Some GeckoView/extension combinations deliver the popup asynchronously.
+                // If no popup was produced, the manifest URL fallback below will recover it.
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (_pendingPopup.value == null) {
+                        try {
+                            val stillActive = currentBrowserSession(ctx)
+                            if (stillActive === activeSession) {
+                                val directUrl = resolveExtensionPopupUrl(rawExt)
+                                if (!directUrl.isNullOrBlank()) openDirectPopup(rawExt, directUrl, ctx)
+                            }
+                        } catch (t: Throwable) {
+                            Log.d(TAG, "Delayed extension popup fallback failed for $extensionId", t)
+                        }
+                    }
+                }, 700L)
                 return
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to click extension action for $extensionId, falling back to direct popup load", e)
@@ -532,10 +770,20 @@ object PetalExtensionManager {
         }
         _pendingPopup.value = null
 
-        val popupSession = GeckoSession()
+        val popupSettings = org.mozilla.geckoview.GeckoSessionSettings.Builder()
+            .usePrivateMode(false)
+            .allowJavascript(true)
+            .viewportMode(org.mozilla.geckoview.GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
+            .build()
+        val popupSession = GeckoSession(popupSettings)
         val runtime = PetalGeckoRuntime.getOrCreate(context.applicationContext)
         if (!popupSession.isOpen) {
             popupSession.open(runtime)
+        }
+        popupSession.progressDelegate = object : GeckoSession.ProgressDelegate {
+            override fun onPageStop(session: GeckoSession, success: Boolean) {
+                injectExtensionPopupResponsiveFix(session)
+            }
         }
         popupSession.loadUri(popupUrl)
 
@@ -579,6 +827,11 @@ object PetalExtensionManager {
         } else {
             openDirectPopup(extItem.raw, optionsUrl, context)
         }
+    }
+
+    private fun currentBrowserSession(context: Context): GeckoSession? {
+        val activity = findBrowserActivity(context) ?: return null
+        return (activity.currentAlbumController as? PetalGeckoView)?.session
     }
 
     private fun findBrowserActivity(context: Context): com.petal.browser.activity.BrowserActivity? {
