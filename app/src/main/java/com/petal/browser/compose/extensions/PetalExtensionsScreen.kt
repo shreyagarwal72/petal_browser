@@ -854,10 +854,17 @@ fun PetalExtensionPopupScreen(
                                 return GeckoResult.fromValue(AllowOrDeny.ALLOW)
                             }
                             if (uri.startsWith("http://", ignoreCase = true) || uri.startsWith("https://", ignoreCase = true)) {
-                                (hostActivity as? com.petal.browser.activity.BrowserActivity)?.let { act ->
+                                hostActivity?.let { act ->
                                     act.runOnUiThread {
                                         onDismiss()
-                                        act.addAlbum(null, uri, true)
+                                        val browserActivity = act as? com.petal.browser.activity.BrowserActivity
+                                        if (browserActivity != null) {
+                                            browserActivity.addAlbum(null, uri, true)
+                                        } else {
+                                            try {
+                                                act.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)))
+                                            } catch (ignored: Exception) {}
+                                        }
                                     }
                                 }
                                 return GeckoResult.fromValue(AllowOrDeny.DENY)
@@ -867,10 +874,17 @@ fun PetalExtensionPopupScreen(
 
                         override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
                             if (uri.isNotEmpty()) {
-                                (hostActivity as? com.petal.browser.activity.BrowserActivity)?.let { act ->
+                                hostActivity?.let { act ->
                                     act.runOnUiThread {
                                         onDismiss()
-                                        act.addAlbum(null, uri, true)
+                                        val browserActivity = act as? com.petal.browser.activity.BrowserActivity
+                                        if (browserActivity != null) {
+                                            browserActivity.addAlbum(null, uri, true)
+                                        } else {
+                                            try {
+                                                act.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)))
+                                            } catch (ignored: Exception) {}
+                                        }
                                     }
                                 }
                             }
