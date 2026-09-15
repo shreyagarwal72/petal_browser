@@ -60,6 +60,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.petal.browser.compose.downloads.PetalFetchDownloadBridge
 import com.petal.browser.media.ytdlp.PetalSocialDownloadService
 import com.petal.browser.media.ytdlp.PetalYtDlpEngine
 import com.petal.browser.media.ytdlp.SupportedPlatforms
@@ -272,8 +273,12 @@ private fun PetalMediaSheet(
                                                 val cookies = try {
                                                     CookieManager.getInstance().getCookie(currentPageUrl)
                                                 } catch (_: Exception) { null }
-                                                val info = PetalYtDlpEngine.fetchInfo(currentPageUrl, cookies)
-                                                socialState = if (info != null) {
+                                                val info = PetalYtDlpEngine.fetchInfo(
+                                                    context = context,
+                                                    url = currentPageUrl,
+                                                    cookies = cookies
+                                                )
+                                                socialState = if (info != null && info.formats.isNotEmpty()) {
                                                     SocialState.Ready(info, info.formats.first())
                                                 } else {
                                                     SocialState.Failed(
@@ -375,13 +380,39 @@ private fun PetalMediaSheet(
                                             val cookies = try {
                                                 CookieManager.getInstance().getCookie(currentPageUrl)
                                             } catch (_: Exception) { null }
-                                            PetalSocialDownloadService.enqueue(
-                                                context = context,
-                                                url     = currentPageUrl,
-                                                format  = selFmt,
-                                                cookies = cookies,
-                                                title   = info.title
-                                            )
+
+                                            when {
+                                                // Direct URL formats come from the InnerTube fallback.
+                                                // formatId IS the stream URL — download directly.
+                                                selFmt.isDirectUrl -> {
+                                                    val mimeType = when {
+                                                        selFmt.isAudioOnly -> "audio/mp4"
+                                                        selFmt.formatId.contains(".webm", ignoreCase = true) -> "video/webm"
+                                                        else -> "video/mp4"
+                                                    }
+                                                    PetalFetchDownloadBridge.enqueueMediaDownload(
+                                                        context = context,
+                                                        url = selFmt.formatId,
+                                                        fileName = info.title.ifBlank { "Petal media" },
+                                                        mimeType = mimeType,
+                                                        userAgent = android.webkit.WebSettings.getDefaultUserAgent(context),
+                                                        cookie = cookies,
+                                                        headers = mapOf("Referer" to currentPageUrl),
+                                                        onFailed = { socialState = SocialState.Failed("Petal Download Manager could not queue this media.") }
+                                                    )
+                                                }
+
+                                                // Normal yt-dlp flow: pass the format selector.
+                                                else -> {
+                                                    PetalSocialDownloadService.enqueue(
+                                                        context = context,
+                                                        url     = currentPageUrl,
+                                                        format  = selFmt,
+                                                        cookies = cookies,
+                                                        title   = info.title
+                                                    )
+                                                }
+                                            }
                                             socialState = SocialState.Done
                                             onDismiss()
                                         },
@@ -392,6 +423,7 @@ private fun PetalMediaSheet(
                                         Text("Download · ${selFmt.label}")
                                     }
                                 }
+
 
                                 // ── Failed ────────────────────────────────
                                 is SocialState.Failed -> {

@@ -69,9 +69,19 @@ class PetalApplication : Application() {
             com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(this)
             // Initialize yt-dlp engine for Petal Social Downloader (non-fatal)
             try {
-                com.yausername.youtubedl_android.YoutubeDL.getInstance().init(this)
-                com.yausername.ffmpeg.FFmpeg.getInstance().init(this)
-                com.yausername.aria2c.Aria2c.getInstance().init(this)
+                com.petal.browser.media.ytdlp.PetalYtDlpEngine.initialize(this)
+                // Silently auto-update the yt-dlp extractor once per day in the background.
+                // YouTube frequently changes extractors — keeping yt-dlp current prevents
+                // the "couldn't fetch media information" failure for most users.
+                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        com.petal.browser.media.ytdlp.PetalYtDlpEngine.checkAutoUpdate(
+                            this@PetalApplication
+                        )
+                    } catch (t: Throwable) {
+                        android.util.Log.w(TAG, "Background yt-dlp update check failed", t)
+                    }
+                }
                 Log.i(TAG, "yt-dlp engine initialized")
             } catch (t: Throwable) {
                 Log.w(TAG, "yt-dlp init failed (social downloader unavailable)", t)
