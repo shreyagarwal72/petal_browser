@@ -775,11 +775,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        // Automatic Google Play Store update check on launch (Material 3 Expressive UI)
-        try {
-            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).checkForUpdates(this, true);
-        } catch (Exception e) {
-            android.util.Log.w("BrowserActivity", "Could not check for Play Store updates", e);
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
         }
 
         // Tab Session Restoration & Rehydration
@@ -864,12 +861,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             return;
         }
-        if (requestCode == com.petal.browser.update.PetalPlayUpdateManager.UPDATE_REQUEST_CODE) {
-            if (resultCode != Activity.RESULT_OK) {
-                android.util.Log.d("BrowserActivity", "Play Store update flow canceled or returned result: " + resultCode);
-            }
-            return;
-        }
         if (requestCode == INPUT_FILE_REQUEST_CODE) {
             if (mFilePathCallback != null) {
                 Uri[] results = null;
@@ -914,9 +905,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         super.onResume();
         predictiveBackStartedOnOverlay = false;
         applyAddressBarPosition();
-        try {
-            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).onResume(this);
-        } catch (Exception ignored) {}
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
         } else if (ninjaWebView != null) {
@@ -979,9 +967,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 Fragment_settings_Backup.backup(activity);
             }
             com.petal.browser.media.BrowserMediaDelegate.unregisterPipReceiver(this);
-            try {
-                com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).unregisterListener();
-            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "Error in BrowserActivity.onDestroy", e);
         }
@@ -2564,13 +2549,29 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     @Override
     public synchronized void removeAlbum(final AlbumController controller) {
         if (BrowserContainer.size() <= 1) {
-            String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
-            String homeUrl = sp.getString("favoriteURL", "about:blank");
-            if (currentUrl != null && !isHomePage(currentUrl) && !currentUrl.equals(homeUrl)) {
-                ninjaWebView.loadUrl(homeUrl);
-                showAlbum(currentAlbumController, homeUrl);
+            boolean isIncog = false;
+            if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                isIncog = ((com.petal.browser.view.PetalGeckoView) controller).isIncognito();
+            } else if (controller instanceof NinjaWebView) {
+                isIncog = ((NinjaWebView) controller).isIncognito();
+            } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                isIncog = ((com.petal.browser.browser.PlaceholderAlbumController) controller).isIncognito();
+            }
+            if (isIncog) {
+                removeAlbumSilently(controller);
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+                com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
             } else {
-                doubleTapsQuit();
+                String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
+                String homeUrl = sp.getString("favoriteURL", "about:blank");
+                if (currentUrl != null && !isHomePage(currentUrl) && !currentUrl.equals(homeUrl)) {
+                    if (currentAlbumController != null) {
+                        currentAlbumController.loadUrl(homeUrl);
+                    }
+                    showAlbum(currentAlbumController, homeUrl);
+                } else {
+                    doubleTapsQuit();
+                }
             }
             updateOmniBox();
             updatePersistentBottomNav();
@@ -2714,6 +2715,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             updatePersistentBottomNav();
             saveOpenedTabs();
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
         } catch (Exception e) {
             Log.e(TAG, "Error removing album silently", e);
         }
@@ -4345,6 +4347,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             } else if (ninjaWebView != null) {
                 favicon = ninjaWebView.getFavicon();
             }
+            boolean isIncognitoTab = (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView)
+                    ? ((com.petal.browser.view.PetalGeckoView) currentAlbumController).isIncognito()
+                    : (ninjaWebView != null && ninjaWebView.isIncognito());
 
             View omniboxView = com.petal.browser.ui.components.PetalOmniboxBridge.createOmniboxView(
                 BrowserActivity.this,
@@ -4352,6 +4357,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 pageTitle != null ? pageTitle : "",
                 pageUrl != null ? pageUrl : "",
                 favicon,
+                isIncognitoTab,
                 () -> {
                     showAlbum(currentAlbumController);
                     return kotlin.Unit.INSTANCE;
@@ -5527,14 +5533,30 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         try {
             List<AlbumController> toRemove = new ArrayList<>();
             for (AlbumController album : BrowserContainer.list()) {
-                if (album instanceof NinjaWebView && ((NinjaWebView) album).isIncognito()) {
+                boolean isIncog = false;
+                if (album instanceof com.petal.browser.view.PetalGeckoView) {
+                    isIncog = ((com.petal.browser.view.PetalGeckoView) album).isIncognito();
+                } else if (album instanceof NinjaWebView) {
+                    isIncog = ((NinjaWebView) album).isIncognito();
+                } else if (album instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                    isIncog = ((com.petal.browser.browser.PlaceholderAlbumController) album).isIncognito();
+                }
+                if (isIncog) {
                     toRemove.add(album);
                 }
             }
             for (AlbumController album : toRemove) {
-                removeAlbum(album);
+                removeAlbumSilently(album);
             }
-            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.setIncognitoTabCount(this, 0);
+            if (BrowserContainer.size() == 0) {
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+            } else if (currentAlbumController == null) {
+                showAlbum(BrowserContainer.get(0));
+            }
+            updateOmniBox();
+            updatePersistentBottomNav();
+            saveOpenedTabs();
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
             NinjaToast.show(this, "Closed all Incognito tabs");
         } catch (Exception e) {
             e.printStackTrace();
@@ -6001,6 +6023,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         updateOmniBox();
         updatePersistentBottomNav();
         saveOpenedTabs();
+        com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
     }
 
     public void saveOpenedTabs() {
