@@ -408,6 +408,38 @@ fun MiscSettingsScreenContent(
                     )
                 }
 
+                // App Updates & Google Play Card (Play Store variant)
+                SettingsCategoryCard(
+                    title = "App Updates & Google Play",
+                    icon = Icons.Rounded.SystemUpdate,
+                    cardId = "misc_updates",
+                    targetHighlightId = targetHighlightItemId
+                ) {
+                    ToggleRow(
+                        title = "Automatic Play Store updates",
+                        subtitle = "Check for Google Play updates automatically when starting Petal",
+                        icon = Icons.Rounded.PlayArrow,
+                        checked = checkUpdateOnLaunch,
+                        onCheckedChange = onCheckUpdateOnLaunchChange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            (context as? androidx.activity.ComponentActivity)?.let { act ->
+                                com.petal.browser.update.PetalPlayUpdateManager.getInstance(act).checkForUpdates(act, false)
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Rounded.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Check for Updates Now", fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 Spacer(Modifier.height(32.dp))
             }
         }

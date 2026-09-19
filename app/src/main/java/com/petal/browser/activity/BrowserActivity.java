@@ -775,8 +775,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        if (sp.getBoolean("sp_check_update_on_launch", true)) {
-            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        // Automatic Google Play Store update check on launch (Material 3 Expressive UI)
+        try {
+            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).checkForUpdates(this, true);
+        } catch (Exception e) {
+            android.util.Log.w("BrowserActivity", "Could not check for Play Store updates", e);
         }
 
         // Tab Session Restoration & Rehydration
@@ -861,6 +864,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             return;
         }
+        if (requestCode == com.petal.browser.update.PetalPlayUpdateManager.UPDATE_REQUEST_CODE) {
+            if (resultCode != Activity.RESULT_OK) {
+                android.util.Log.d("BrowserActivity", "Play Store update flow canceled or returned result: " + resultCode);
+            }
+            return;
+        }
         if (requestCode == INPUT_FILE_REQUEST_CODE) {
             if (mFilePathCallback != null) {
                 Uri[] results = null;
@@ -905,6 +914,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         super.onResume();
         predictiveBackStartedOnOverlay = false;
         applyAddressBarPosition();
+        try {
+            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).onResume(this);
+        } catch (Exception ignored) {}
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
         } else if (ninjaWebView != null) {
@@ -967,6 +979,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 Fragment_settings_Backup.backup(activity);
             }
             com.petal.browser.media.BrowserMediaDelegate.unregisterPipReceiver(this);
+            try {
+                com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).unregisterListener();
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "Error in BrowserActivity.onDestroy", e);
         }

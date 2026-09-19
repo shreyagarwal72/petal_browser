@@ -47,7 +47,7 @@ enum class SettingsCategory(val title: String, val subtitle: String, val iconRes
     TABS("Tabs", "Inactive tabs, tab groups and tab cleanup", com.petal.browser.R.drawable.icon_tab),
     MISCELLANEOUS("Miscellaneous", "Download engine, external apps handling and extra browser tools", com.petal.browser.R.drawable.download_2_filled),
     DATA_STORAGE("Data & Backup", "Backup and restore history, bookmarks & settings", com.petal.browser.R.drawable.backup_filled),
-    UPDATER("Updates & Diagnostics", "Release tracker, auto-updates & crash reporting", com.petal.browser.R.drawable.update_rounded),
+    ADS("Supportive Ads", "Configure AdMob supportive ad banner preferences", com.petal.browser.R.drawable.paid),
     ABOUT("About & Developer", "App version, licenses, GitHub & developer", com.petal.browser.R.drawable.info_filled)
 }
 
@@ -277,8 +277,8 @@ private fun RenderCategoryContent(
         SettingsCategory.DATA_STORAGE -> {
             DataBackupSettingsScreen(onNavigateBack = onNavigateBack)
         }
-        SettingsCategory.UPDATER -> {
-            UpdaterSettingsScreen(onNavigateBack = onNavigateBack)
+        SettingsCategory.ADS -> {
+            SupportiveAdsSettingsScreen(targetHighlightItemId = targetHighlightItemId, onNavigateBack = onNavigateBack)
         }
         SettingsCategory.ABOUT -> {
             AboutSettingsScreen(onNavigateBack = onNavigateBack)

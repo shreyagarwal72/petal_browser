@@ -6,6 +6,7 @@
     <string name="app_restart">On restart</string>
     <string name="app_session">… in current session?</string>
     <string name="app_name">Petal</string>
+    <string name="admob_app_id">ca-app-pub-5680314597533936~2825634534</string>
     <string name="app_ok">OK</string>
     <string name="app_no">No</string>
     <string name="app_help">Help</string>
