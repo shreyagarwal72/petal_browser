@@ -12,14 +12,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = '17'
-        freeCompilerArgs += [
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
-        ]
-    }
-
     buildFeatures {
         compose true
     }
@@ -110,6 +102,18 @@ android {
     return void
 }
 
+// Kotlin 2.4 removed the legacy android { kotlinOptions {} } DSL.
+// Use the compilerOptions DSL instead.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+        )
+    }
+}
+
 tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask).configureEach {
     enabled = false
 }
@@ -117,11 +121,13 @@ tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask).con
 configurations.all {
     resolutionStrategy {
         force 'com.google.android.gms:play-services-fido:21.1.0'
-        force 'org.jetbrains.kotlin:kotlin-stdlib:2.0.21'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-common:2.0.21'
-        force 'org.jetbrains.kotlin:kotlin-reflect:2.0.21'
+        force 'org.jetbrains.kotlin:kotlin-stdlib:2.4.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.4.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-common:2.4.0'
+        force 'org.jetbrains.kotlin:kotlin-reflect:2.4.0'
+        // Match Kotlin metadata emitted by Mozilla Components 155.
+        force 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0'
     }
 }
 
@@ -174,7 +180,7 @@ dependencies {
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
     implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
 
     // Legacy Google Sign-In (play-services-auth). Deprecated by Google in favor of
     // Credential Manager, but kept as the active sign-in path here as a workaround for a
@@ -225,8 +231,9 @@ dependencies {
     implementation 'org.mozilla.components:feature-media:155.0.1'
 
     // Dagger Hilt Dependency Injection
-    implementation 'com.google.dagger:hilt-android:2.51.1'
-    kapt 'com.google.dagger:hilt-compiler:2.51.1'
+    implementation 'com.google.dagger:hilt-android:2.58'
+    kapt 'com.google.dagger:hilt-compiler:2.58'
+    kapt 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
 
     // Google Mobile Ads (AdMob) — Play Store variant only (Supportive Ads)
