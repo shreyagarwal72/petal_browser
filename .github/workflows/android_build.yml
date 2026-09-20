@@ -123,11 +123,9 @@ jobs:
               filename=$(basename "$aab")
               final_aab="signed_aabs/$filename"
               cp "$aab" "$final_aab"
-              jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-                -keystore /tmp/signing.keystore \
-                -storepass "$STORE_PASS" \
-                -keypass "$KEY_PASS" \
-                "$final_aab" "$ALIAS_NAME"
+              # bundleRelease is already signed by the Gradle release signingConfig.
+              # Do not run jarsigner again: a second signature adds another
+              # certificate chain, which Google Play rejects for Android App Bundles.
               jarsigner -verify "$final_aab"
             fi
           done
@@ -232,4 +230,3 @@ jobs:
               done
             fi
           done
-
