@@ -481,6 +481,63 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         super.attachBaseContext(HelperUnit.applyLanguage(newBase));
     }
 
+    /**
+     * Custom splash exit: fires the launch ripple from the splash icon's centre while the icon scales up and the
+     * splash fades away, so the splash dissolves into the ripple instead of cutting to the app.
+     */
+    private void playSplashExitWithRipple(androidx.core.splashscreen.SplashScreenViewProvider provider) {
+        final View splashView = provider.getView();
+        // Android 16 can hand back a splash provider whose icon view has already
+        // been detached during the exit callback. Treat it as unavailable and
+        // let the ripple fall back to the window centre instead of crashing.
+        final View iconView;
+        try {
+            iconView = provider.getIconView();
+        } catch (RuntimeException ignored) {
+            iconView = null;
+        }
+        final boolean fireRipple = splashRipplePending && !isFinishing() && !isDestroyed();
+        splashRipplePending = false;
+
+        if (fireRipple) {
+            View decor = getWindow().getDecorView();
+            if (iconView != null && iconView.getWidth() > 0) {
+                int[] loc = new int[2];
+                iconView.getLocationInWindow(loc);
+                float cx = loc[0] + iconView.getWidth() / 2f;
+                float cy = loc[1] + iconView.getHeight() / 2f;
+                com.petal.browser.ui.layout.LiquidRippleEffect.trigger(decor, cx, cy);
+            } else {
+                com.petal.browser.ui.layout.LiquidRippleEffect.trigger(decor);
+            }
+        }
+
+        final long duration = fireRipple ? 450L : 200L;
+        final boolean[] removed = {false};
+        final Runnable removeOnce = () -> {
+            if (!removed[0]) {
+                removed[0] = true;
+                provider.remove();
+            }
+        };
+        if (fireRipple && iconView != null) {
+            iconView.animate()
+                    .scaleX(1.25f)
+                    .scaleY(1.25f)
+                    .setDuration(duration)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .start();
+        }
+        splashView.animate()
+                .alpha(0f)
+                .setDuration(duration)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(removeOnce)
+                .start();
+        // Safety net so the splash can never get stuck if the animation is cancelled.
+        splashView.postDelayed(removeOnce, duration + 400L);
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
