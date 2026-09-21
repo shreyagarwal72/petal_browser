@@ -58,6 +58,9 @@ class PetalGeckoView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr), AlbumController, NestedScrollingChild3 {
 
     companion object {
+        /** Max device-pixel scroll offset still considered "at top". */
+        const val PAGE_TOP_TOLERANCE_PX = 3
+
         private const val TAG = "PetalGeckoView"
 
         /**
@@ -272,11 +275,75 @@ class PetalGeckoView @JvmOverloads constructor(
 
         // Permission Delegate (Handles ContentPermission, WebAuthn, Device Permissions)
         session.permissionDelegate = object : GeckoSession.PermissionDelegate {
+            override fun onMediaPermissionRequest(
+                session: GeckoSession,
+                uri: String,
+                video: Array<out GeckoSession.PermissionDelegate.MediaSource>?,
+                audio: Array<out GeckoSession.PermissionDelegate.MediaSource>?,
+                callback: GeckoSession.PermissionDelegate.MediaCallback
+            ) {
+                val activity = getHostActivity()
+                if (activity == null) {
+                    callback.reject()
+                    return
+                }
+                val permissionType = if (!video.isNullOrEmpty()) {
+                    com.petal.browser.ui.components.PetalPermissionType.CAMERA
+                } else {
+                    com.petal.browser.ui.components.PetalPermissionType.MICROPHONE
+                }
+                activity.runOnUiThread {
+                    com.petal.browser.ui.components.PetalPermissionDialogBridge.showPermissionPrompt(
+                        activity,
+                        permissionType,
+                        uri,
+                        Runnable {
+                            if (!video.isNullOrEmpty()) {
+                                com.petal.browser.unit.HelperUnit.grantPermissionsCamera(activity)
+                            }
+                            if (!audio.isNullOrEmpty()) {
+                                com.petal.browser.unit.HelperUnit.grantPermissionsMic(activity)
+                            }
+                            callback.grant(video?.firstOrNull(), audio?.firstOrNull())
+                        },
+                        Runnable { callback.reject() }
+                    )
+                }
+            }
+
             override fun onContentPermissionRequest(
                 session: GeckoSession,
                 perm: GeckoSession.PermissionDelegate.ContentPermission
             ): GeckoResult<Int>? {
-                return GeckoResult.fromValue(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+                val result = GeckoResult<Int>()
+                val activity = getHostActivity()
+                if (activity == null) {
+                    result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+                    return result
+                }
+
+                // Gecko content permissions are promptable site permissions. Never
+                // auto-allow them: route geolocation through Petal's Material dialog
+                // and deny unsupported content permission types explicitly.
+                if (perm.permission == GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION) {
+                    activity.runOnUiThread {
+                        com.petal.browser.ui.components.PetalPermissionDialogBridge.showPermissionPrompt(
+                            activity,
+                            com.petal.browser.ui.components.PetalPermissionType.LOCATION,
+                            perm.uri,
+                            Runnable {
+                                com.petal.browser.unit.HelperUnit.grantPermissionsLoc(activity)
+                                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+                            },
+                            Runnable {
+                                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+                            }
+                        )
+                    }
+                } else {
+                    result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+                }
+                return result
             }
         }
 
@@ -1380,6 +1447,7 @@ class PetalGeckoView @JvmOverloads constructor(
 
     fun clearMatches() {
         session.finder.clear()
+        com.petal.browser.engine.gecko.PetalEngineStore.clearFindResults(context, tabId)
     }
 
     fun findAllAsync(query: String) {
@@ -1485,10 +1553,20 @@ class PetalGeckoView @JvmOverloads constructor(
             // than the standard View scroll APIs), so OR-ing it in previously
             // made this always true and permanently blocked pull-to-refresh's
             // canChildScrollUp() check from ever seeing "at top".
-            return currentScrollY > 0
+            return !isPageAtTop()
         }
         return geckoView.canScrollVertically(direction)
     }
+
+    /**
+     * True when the page is at (or within a couple of device pixels of) the top.
+     *
+     * Gecko reports scroll in device pixels and can leave the last reported value at
+     * 1-3px after a fling settles because of sub-pixel / DPR rounding. Treating any
+     * value > 0 as "scrolled" made pull-to-refresh permanently unavailable on pages
+     * that were visibly at the top. Negative values (overscroll) also count as top.
+     */
+    fun isPageAtTop(): Boolean = currentScrollY <= PAGE_TOP_TOLERANCE_PX
 
     fun getPageScrollY(): Int = currentScrollY
 
@@ -1564,6 +1642,25 @@ class PetalGeckoView @JvmOverloads constructor(
 
     fun setAlbumTitle(title: String?, url: String?) {
         album.setAlbumTitle(title, url)
+    }
+
+    /**
+     * Records the URL of a tab whose navigation was already started by Gecko itself
+     * (a link opened in a new tab / popup adopted via [adoptPopupSession]) WITHOUT
+     * issuing another load.
+     *
+     * currentUrl starts out as "about:blank". BrowserActivity.showAlbum() decides
+     * "is this the home screen?" from getAlbumUrl(), so an adopted tab that still
+     * reports about:blank was treated as home: showAlbum() called resetToHome(),
+     * which does session.stop() + loadUri("about:blank") - cancelling the link that
+     * was loading and showing the home screen instead. Setting the real URL here
+     * makes showAlbum() treat it as a website and leaves Gecko's load untouched.
+     */
+    fun markAdoptedNavigation(url: String?) {
+        val target = url?.trim().orEmpty()
+        if (target.isEmpty() || BrowserUnit.isHomePage(target)) return
+        currentUrl = target
+        album.setAlbumTitle(target, target)
     }
 
     fun getTabId(): String = tabId
@@ -2119,7 +2216,7 @@ class SafeGeckoView : GeckoView {
             // Check parent PetalGeckoView's compositor scroll position if attached.
             val parent = parent
             if (parent is PetalGeckoView) {
-                return parent.getPageScrollY() > 0
+                return !parent.isPageAtTop()
             }
             return false
         }

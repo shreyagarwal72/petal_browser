@@ -795,15 +795,17 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        // Automatic Google Play Store update check on launch (Material 3 Expressive UI)
-        try {
-            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).checkForUpdates(this, true);
-        } catch (Exception e) {
-            android.util.Log.w("BrowserActivity", "Could not check for Play Store updates", e);
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
         }
 
         // Tab Session Restoration & Rehydration
         boolean tabsRestored = com.petal.browser.unit.PetalTabSessionManager.restoreSession(this);
+        // Keep Android Components' restore lifecycle in sync with Petal's richer
+        // tab/session restoration. Individual Gecko sessions are registered in
+        // BrowserStore as tabs are materialized; this action closes the restore
+        // phase for middleware and SessionStorage observers.
+        com.petal.browser.engine.gecko.PetalEngineStore.markRestoreComplete(this);
 
         // If still no open tab, open default page
         if (!tabsRestored && BrowserContainer.size() < 1) {
@@ -884,12 +886,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             return;
         }
-        if (requestCode == com.petal.browser.update.PetalPlayUpdateManager.UPDATE_REQUEST_CODE) {
-            if (resultCode != Activity.RESULT_OK) {
-                android.util.Log.d("BrowserActivity", "Play Store update flow canceled or returned result: " + resultCode);
-            }
-            return;
-        }
         if (requestCode == INPUT_FILE_REQUEST_CODE) {
             if (mFilePathCallback != null) {
                 Uri[] results = null;
@@ -934,9 +930,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         super.onResume();
         predictiveBackStartedOnOverlay = false;
         applyAddressBarPosition();
-        try {
-            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).onResume(this);
-        } catch (Exception ignored) {}
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
         } else if (ninjaWebView != null) {
@@ -999,9 +992,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 Fragment_settings_Backup.backup(activity);
             }
             com.petal.browser.media.BrowserMediaDelegate.unregisterPipReceiver(this);
-            try {
-                com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).unregisterListener();
-            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "Error in BrowserActivity.onDestroy", e);
         }
@@ -4308,7 +4298,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 // Home page is top-level Compose view; allow pull-to-refresh at the top
                 isScrolledToTop = true;
             } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
-                isScrolledToTop = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getPageScrollY() <= 0;
+                isScrolledToTop = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).isPageAtTop();
             } else if (ninjaWebView != null) {
                 isScrolledToTop = ninjaWebView.getScrollY() <= 0;
             }
@@ -4863,7 +4853,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     runOnUiThread(() -> {
                         NinjaToast.show(BrowserActivity.this, "Saved website to view offline!");
                         com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(
-                                BrowserActivity.this, url, archiveFile.getAbsolutePath());
+                                BrowserActivity.this, url, archiveFile.getAbsolutePath(), rawTitle);
                         com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
                                 BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
                     });
@@ -6339,6 +6329,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             // the tab metadata without calling loadUrl again, which would race the adopted
             // session and could replace the destination with the home page.
             geckoView.setAlbumTitle(getString(R.string.app_name), popupUrl);
+            // Tell the tab its real URL (no reload). Without this its URL stays
+            // "about:blank", showAlbum() treats it as the home page and resets it,
+            // cancelling the link that Gecko was loading.
+            geckoView.markAdoptedNavigation(popupUrl);
 
             if (currentAlbumController != null) {
                 geckoView.setPredecessor(currentAlbumController);

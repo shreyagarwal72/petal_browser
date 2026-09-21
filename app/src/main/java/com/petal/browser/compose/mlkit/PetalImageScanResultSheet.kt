@@ -32,12 +32,6 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.preference.PreferenceManager
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.petal.browser.ui.theme.AppFont
 import com.petal.browser.ui.theme.ColorStyle
 import com.petal.browser.ui.theme.PetalExpressiveTheme
@@ -48,6 +42,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.Result
+import com.google.zxing.DecodeHintType
+import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.RGBLuminanceSource
 
 object PetalImageScannerManager {
 
@@ -98,53 +98,22 @@ object PetalImageScannerManager {
         bitmap: Bitmap,
         onResult: (detectedText: String?, detectedBarcodes: List<BarcodeResult>?, error: String?) -> Unit
     ) {
-        val inputImage = InputImage.fromBitmap(bitmap, 0)
-        val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-        val barcodeScanner = BarcodeScanning.getClient(
-            BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
-                .build()
-        )
-
-        textRecognizer.process(inputImage)
-            .addOnSuccessListener { textResult ->
-                val detectedText = textResult.text.takeIf { it.isNotBlank() }
-
-                barcodeScanner.process(inputImage)
-                    .addOnSuccessListener { barcodeList ->
-                        val barcodes = barcodeList.mapNotNull { b ->
-                            val rawValue = b.rawValue ?: return@mapNotNull null
-                            BarcodeResult(
-                                rawValue = rawValue,
-                                displayValue = b.displayValue ?: rawValue,
-                                format = b.format
-                            )
-                        }.takeIf { it.isNotEmpty() }
-
-                        onResult(detectedText, barcodes, null)
-                    }
-                    .addOnFailureListener {
-                        onResult(detectedText, null, null)
-                    }
-            }
-            .addOnFailureListener { e ->
-                barcodeScanner.process(inputImage)
-                    .addOnSuccessListener { barcodeList ->
-                        val barcodes = barcodeList.mapNotNull { b ->
-                            val rawValue = b.rawValue ?: return@mapNotNull null
-                            BarcodeResult(
-                                rawValue = rawValue,
-                                displayValue = b.displayValue ?: rawValue,
-                                format = b.format
-                            )
-                        }.takeIf { it.isNotEmpty() }
-
-                        onResult(null, barcodes, null)
-                    }
-                    .addOnFailureListener {
-                        onResult(null, null, e.localizedMessage ?: "ML Kit recognition error.")
-                    }
-            }
+        try {
+            val width = bitmap.width
+            val height = bitmap.height
+            val pixels = IntArray(width * height)
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+            val source = RGBLuminanceSource(width, height, pixels)
+            val hints = mapOf(DecodeHintType.TRY_HARDER to true)
+            val result: Result = MultiFormatReader().apply { setHints(hints) }.decode(BinaryBitmap(HybridBinarizer(source)))
+            onResult(
+                result.text,
+                listOf(BarcodeResult(result.text, result.text, result.barcodeFormat.ordinal)),
+                null
+            )
+        } catch (_: Exception) {
+            onResult(null, null, null)
+        }
     }
 }
 

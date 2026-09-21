@@ -20,9 +20,11 @@ package com.petal.browser.compose.downloads
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.webkit.MimeTypeMap
+import androidx.core.app.NotificationManagerCompat
 import com.tonyodev.fetch2.AbstractFetchListener
 import com.tonyodev.fetch2.Download
 import com.tonyodev.fetch2.Fetch
@@ -37,13 +39,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.util.Locale
+import mozilla.components.browser.state.state.content.DownloadState
+import mozilla.components.feature.downloads.manager.FetchDownloadManager
+import mozilla.components.support.base.android.NotificationsDelegate
+import kotlin.reflect.KClass
 
 object PetalFetchDownloadBridge {
+
+    /** Off until Mozilla's download middleware is registered in PetalEngineStore. */
+    private const val USE_MOZILLA_DOWNLOAD_PIPELINE = false
 
     private val downloadsMap = LinkedHashMap<Int, Download>()
     private val createdAtMap = LinkedHashMap<Int, Long>()
     private val speedMap = LinkedHashMap<Int, Long>()
     private val etaMap = LinkedHashMap<Int, Long>()
+    private val mozillaDownloadsMap = LinkedHashMap<String, DownloadItem>()
+    @Volatile
+    private var applicationContext: Context? = null
 
     private val _downloadItems = MutableStateFlow<List<DownloadItem>>(emptyList())
     val downloadItems: StateFlow<List<DownloadItem>> = _downloadItems.asStateFlow()
@@ -57,6 +69,7 @@ object PetalFetchDownloadBridge {
         synchronized(this) {
             if (initialized) return
             val appContext = context.applicationContext
+            applicationContext = appContext
             val fetch = fetchInstance(appContext)
 
             fetch.addListener(object : AbstractFetchListener() {
@@ -154,34 +167,88 @@ object PetalFetchDownloadBridge {
         onEnqueued: ((Long) -> Unit)? = null,
         onFailed: (() -> Unit)? = null
     ) {
-        val safeHeaders = responseHeaders.filter { (name, value) ->
-            name.isNotBlank() && value.isNotBlank() &&
-                !name.equals("Content-Length", true) &&
-                !name.equals("Content-Encoding", true) &&
-                !name.equals("Transfer-Encoding", true) &&
-                !name.equals("Connection", true) &&
-                !name.equals("Keep-Alive", true) &&
-                !name.equals("Proxy-Authenticate", true) &&
-                !name.equals("Proxy-Authorization", true) &&
-                !name.equals("TE", true) &&
-                !name.equals("Trailer", true) &&
-                !name.equals("Upgrade", true) &&
-                !name.equals("Content-Disposition", true) &&
-                !name.equals("Content-Type", true) &&
-                '\r' !in name && '\n' !in name &&
-                '\r' !in value && '\n' !in value
+        // Mozilla's FetchDownloadManager pipeline is intentionally NOT used yet.
+        // It returns a download id the moment the request is created, but nothing in
+        // PetalEngineStore registers Mozilla's download middleware, so the download
+        // stays INITIATED (clock icon, 0 B) forever - and because it "succeeded", the
+        // working Fetch2 path below was never reached. Browser downloads go straight
+        // to Fetch2, the same engine the media sniffer already uses successfully.
+        // Flip USE_MOZILLA_DOWNLOAD_PIPELINE once the store middleware is wired and tested.
+        if (USE_MOZILLA_DOWNLOAD_PIPELINE &&
+            enqueueMozillaGeckoDownload(context, url, fileName, mimeType, onEnqueued, onFailed)
+        ) {
+            return
+        }
+        // NOTE: responseHeaders are the SERVER'S REPLY headers (ETag, Accept-Ranges,
+        // Last-Modified, Content-Range, Cache-Control, ...). They were previously copied
+        // onto the outgoing REQUEST, which is wrong: validators/range headers can make a
+        // server answer 304/416 or an empty body, leaving a 0 B download stuck. They are
+        // only useful for naming (already resolved in PetalGeckoView), so they are not
+        // forwarded. Send what a download request actually needs instead.
+        val userAgent = try {
+            android.webkit.WebSettings.getDefaultUserAgent(context)
+        } catch (_: Throwable) {
+            null
+        }
+        val cookie = try {
+            android.webkit.CookieManager.getInstance().getCookie(url)
+        } catch (_: Throwable) {
+            null
         }
         enqueueMediaDownload(
             context = context,
             url = url,
             fileName = fileName,
             mimeType = mimeType,
-            userAgent = null,
-            cookie = null,
-            headers = safeHeaders,
+            userAgent = userAgent,
+            cookie = cookie,
+            headers = emptyMap(),
             onEnqueued = onEnqueued,
             onFailed = onFailed
         )
+    }
+
+    private fun enqueueMozillaGeckoDownload(
+        context: Context,
+        url: String,
+        fileName: String,
+        mimeType: String?,
+        onEnqueued: ((Long) -> Unit)?,
+        onFailed: (() -> Unit)?
+    ): Boolean {
+        return try {
+            if (!SafeDownloadValues.isHttpUrl(url)) return false
+            val safeName = SafeDownloadValues.fileName(url, null, mimeType, fileName).ifBlank { "download" }
+            val directory = File(
+                android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS),
+                safeName
+            )
+            val manager = FetchDownloadManager(
+                applicationContext = context.applicationContext,
+                store = com.petal.browser.engine.gecko.PetalEngineStore.getStore(context),
+                service = com.petal.browser.download.PetalMozillaDownloadService::class,
+                notificationsDelegate = NotificationsDelegate(
+                    NotificationManagerCompat.from(context.applicationContext)
+                )
+            )
+            val id = manager.download(
+                DownloadState(
+                    url = url,
+                    fileName = safeName,
+                    contentType = mimeType,
+                    directoryPath = directory.parentFile?.absolutePath
+                        ?: android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS
+                        ).absolutePath
+                )
+            )
+            if (id.isNullOrBlank()) return false
+            onEnqueued?.invoke(id.hashCode().toLong())
+            true
+        } catch (_: Throwable) {
+            onFailed?.invoke()
+            false
+        }
     }
 
     @JvmStatic
@@ -295,18 +362,21 @@ object PetalFetchDownloadBridge {
     @JvmStatic
     fun pause(context: Context, id: Long) {
         ensureInitialized(context)
+        if (sendMozillaDownloadAction(context, id, mozilla.components.feature.downloads.AbstractFetchDownloadService.ACTION_PAUSE)) return
         fetchInstance(context).pause(id.toInt())
     }
 
     @JvmStatic
     fun resume(context: Context, id: Long) {
         ensureInitialized(context)
+        if (sendMozillaDownloadAction(context, id, mozilla.components.feature.downloads.AbstractFetchDownloadService.ACTION_RESUME)) return
         fetchInstance(context).resume(id.toInt())
     }
 
     @JvmStatic
     fun retry(context: Context, id: Long) {
         ensureInitialized(context)
+        if (sendMozillaDownloadAction(context, id, mozilla.components.feature.downloads.AbstractFetchDownloadService.ACTION_TRY_AGAIN)) return
         fetchInstance(context).retry(id.toInt())
         val item = _downloadItems.value.firstOrNull { it.id == id }
         val fileName = item?.fileName ?: "File"
@@ -316,8 +386,25 @@ object PetalFetchDownloadBridge {
     @JvmStatic
     fun cancel(context: Context, id: Long) {
         ensureInitialized(context)
+        if (sendMozillaDownloadAction(context, id, mozilla.components.feature.downloads.AbstractFetchDownloadService.ACTION_CANCEL)) return
         fetchInstance(context).cancel(id.toInt())
         removeEntry(id.toInt())
+    }
+
+    private fun sendMozillaDownloadAction(context: Context, id: Long, action: String): Boolean {
+        val uuid = synchronized(mozillaDownloadsMap) {
+            mozillaDownloadsMap.keys.firstOrNull { it.hashCode().toLong() == id }
+        } ?: return false
+        return try {
+            val intent = Intent(action).apply {
+                setPackage(context.applicationContext.packageName)
+                putExtra(mozilla.components.feature.downloads.INTENT_EXTRA_DOWNLOAD_ID, uuid)
+            }
+            context.applicationContext.sendBroadcast(intent)
+            true
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     /** Cancels (if active) and permanently deletes the download + its partial/complete file. */
@@ -332,7 +419,10 @@ object PetalFetchDownloadBridge {
                 com.petal.browser.engine.gecko.PetalEngineStore.getStore(context).dispatch(
                     mozilla.components.browser.state.action.DownloadAction.RemoveDownloadAction(mozillaId)
                 )
-            } catch (_: Throwable) { }
+            } catch (_: Throwable) {
+                // Keep physical-file cleanup working even if the BrowserStore is
+                // unavailable during process/helper startup.
+            }
             synchronized(mozillaDownloadsMap) { mozillaDownloadsMap.remove(mozillaId) }
             try {
                 item.localUri?.removePrefix("file://")?.let { path ->
@@ -383,8 +473,10 @@ object PetalFetchDownloadBridge {
     }
 
     private fun publish() {
-        val items = synchronized(downloadsMap) { downloadsMap.values.toList() }
+        refreshMozillaDownloads()
+        val fetchItems = synchronized(downloadsMap) { downloadsMap.values.toList() }
             .map { toDownloadItem(it) }
+        val items = fetchItems + synchronized(mozillaDownloadsMap) { mozillaDownloadsMap.values.toList() }
             .sortedWith(
                 compareByDescending<DownloadItem> { item ->
                     item.status == DownloadManager.STATUS_RUNNING ||
@@ -393,6 +485,42 @@ object PetalFetchDownloadBridge {
                 }.thenByDescending { it.timestampMs }
             )
         _downloadItems.value = items
+    }
+
+    /** Mirrors Android Components' global BrowserStore download map into Petal's existing UI model. */
+    private fun refreshMozillaDownloads() {
+        val context = applicationContext ?: return
+        try {
+            val downloads = com.petal.browser.engine.gecko.PetalEngineStore
+                .getStore(context).state.downloads.values
+            synchronized(mozillaDownloadsMap) {
+                mozillaDownloadsMap.clear()
+                downloads.forEach { download ->
+                    val id = download.id.hashCode().toLong()
+                    val status = when (download.status) {
+                        mozilla.components.browser.state.state.content.DownloadState.Status.DOWNLOADING -> DownloadManager.STATUS_RUNNING
+                        mozilla.components.browser.state.state.content.DownloadState.Status.PAUSED -> DownloadManager.STATUS_PAUSED
+                        mozilla.components.browser.state.state.content.DownloadState.Status.INITIATED -> DownloadManager.STATUS_PENDING
+                        mozilla.components.browser.state.state.content.DownloadState.Status.COMPLETED -> DownloadManager.STATUS_SUCCESSFUL
+                        else -> DownloadManager.STATUS_FAILED
+                    }
+                    val total = download.contentLength ?: 0L
+                    mozillaDownloadsMap[download.id] = DownloadItem(
+                        id = id,
+                        fileName = download.fileName ?: "download",
+                        fileUrl = download.url,
+                        progress = download.progress,
+                        status = status,
+                        bytesDownloaded = download.currentBytesCopied,
+                        totalSize = total,
+                        localUri = download.filePath,
+                        timestampMs = download.createdTime
+                    )
+                }
+            }
+        } catch (_: Throwable) {
+            // BrowserStore may not be available during helper-process startup.
+        }
     }
 
     private fun toDownloadItem(d: Download): DownloadItem {

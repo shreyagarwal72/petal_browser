@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,8 +71,16 @@ fun PetalQrScannerScreen(
                 }
             }
             Spacer(Modifier.weight(1f))
-            Box(Modifier.align(Alignment.CenterHorizontally).size(270.dp).border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(32.dp)))
-            Text("Align the code inside the frame", Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp), color = Color.White, style = MaterialTheme.typography.bodyLarge)
+            Box(
+                Modifier.align(Alignment.CenterHorizontally).size(270.dp)
+                    .border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(32.dp))
+            )
+            Text(
+                "Align the code inside the frame",
+                Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge
+            )
             Spacer(Modifier.weight(1f))
         }
         if (hasPermission) {
