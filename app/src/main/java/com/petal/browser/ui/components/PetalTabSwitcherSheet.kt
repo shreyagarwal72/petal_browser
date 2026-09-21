@@ -53,6 +53,7 @@ import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 
 data class TabModel(
@@ -372,7 +373,7 @@ fun PetalTabSwitcherContent(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = PetalBrowserShapes.Sheet,
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -404,7 +405,7 @@ fun PetalTabSwitcherContent(
                     // Far Left: Rounded square "new tab" button with + icon
                     Surface(
                         onClick = onNewTab,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = PetalBrowserShapes.ExtraSmall,
                         color = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(40.dp).popIn()
@@ -420,7 +421,7 @@ fun PetalTabSwitcherContent(
 
                     // Center-Left: Pill-shaped segmented control (List vs Grid)
                     Surface(
-                        shape = RoundedCornerShape(50),
+                        shape = PetalBrowserShapes.Pill,
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier.height(40.dp)
                     ) {
@@ -432,7 +433,7 @@ fun PetalTabSwitcherContent(
                             // List View Toggle Button
                             Surface(
                                 onClick = { isGridView = false },
-                                shape = RoundedCornerShape(50),
+                                shape = PetalBrowserShapes.Pill,
                                 color = if (!isGridView) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 contentColor = if (!isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
@@ -451,7 +452,7 @@ fun PetalTabSwitcherContent(
                             // Grid View Toggle Button
                             Surface(
                                 onClick = { isGridView = true },
-                                shape = RoundedCornerShape(50),
+                                shape = PetalBrowserShapes.Pill,
                                 color = if (isGridView) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 contentColor = if (isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
@@ -536,7 +537,7 @@ fun PetalTabSwitcherContent(
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(50),
+                    shape = PetalBrowserShapes.Pill,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -701,7 +702,7 @@ private fun EmptyStateIllustration() {
     ) {
         // Back card (tilted diagonally behind)
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = PetalBrowserShapes.Small,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
             border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
             modifier = Modifier
@@ -715,7 +716,7 @@ private fun EmptyStateIllustration() {
 
         // Front card (tilted diagonally in front)
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = PetalBrowserShapes.Small,
             color = MaterialTheme.colorScheme.surfaceContainerHighest,
             border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
             shadowElevation = 6.dp,
@@ -750,7 +751,7 @@ fun TabCard(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = PetalBrowserShapes.Small,
         colors = CardDefaults.cardColors(
             containerColor = if (tab.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.surfaceContainer
@@ -759,7 +760,7 @@ fun TabCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(105.dp)
-            .border(borderWidth, borderColor, RoundedCornerShape(20.dp))
+            .border(borderWidth, borderColor, PetalBrowserShapes.Small)
             .bouncyClickable { onSelect() }
             .entrance(index = 0)
     ) {
@@ -824,7 +825,7 @@ fun TabCard(
 
             if (tab.isActive) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = PetalBrowserShapes.ExtraSmall,
                     color = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.align(Alignment.End)

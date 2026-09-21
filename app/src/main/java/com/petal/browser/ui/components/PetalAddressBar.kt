@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -137,7 +138,7 @@ fun PetalAddressBar(
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
     Surface(
-        shape = RoundedCornerShape(if (addressBarHeight.equals("COMPACT", true)) 24.dp else 28.dp),
+        shape = PetalBrowserShapes.OmniboxField,
         color = containerColor,
         tonalElevation = 4.dp,
         shadowElevation = 4.dp,
@@ -350,7 +351,7 @@ fun PetalAddressBar(
     if (showQuickActionsMenu) {
         ModalBottomSheet(
             onDismissRequest = { showQuickActionsMenu = false },
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = PetalBrowserShapes.Sheet,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(
@@ -410,7 +411,7 @@ fun PetalAddressBar(
 
                 // Action 1: Copy Clean URL (strips tracking query params)
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -442,7 +443,7 @@ fun PetalAddressBar(
                 }
                 if (!clipText.isNullOrEmpty()) {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = PetalBrowserShapes.Small,
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -479,7 +480,7 @@ fun PetalAddressBar(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -529,7 +530,7 @@ fun PetalAddressBar(
 
                 // Action 4: Hard Refresh
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -553,7 +554,7 @@ fun PetalAddressBar(
 
                 // Action 5: Privacy & Tracker Shield HUD
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()

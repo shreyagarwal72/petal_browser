@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import java.io.File
 import java.util.Locale
@@ -48,7 +49,7 @@ fun PetalDownloadConfirmationDialog(
     onExternalDownload: (() -> Unit)? = null
 ) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = PetalBrowserShapes.Dialog,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp,
         shadowElevation = 8.dp,
@@ -60,7 +61,7 @@ fun PetalDownloadConfirmationDialog(
                 .padding(24.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = PetalBrowserShapes.Small,
                 color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(52.dp)
             ) {
@@ -117,7 +118,7 @@ fun PetalDownloadConfirmationDialog(
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                 ) {
                     Text(
@@ -165,7 +166,7 @@ fun PetalDownloadConfirmationDialog(
                     // so a menu arrow would be a dead control - show a plain button instead.
                     Button(
                         onClick = onConfirm,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = PetalBrowserShapes.Small,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -197,7 +198,7 @@ fun PetalFirstTimeDownloadEngineDialog(
     var selectedKey by remember { mutableStateOf(initialEngineKey) }
 
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = PetalBrowserShapes.Dialog,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp,
         shadowElevation = 8.dp,
@@ -209,7 +210,7 @@ fun PetalFirstTimeDownloadEngineDialog(
                 .padding(24.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = PetalBrowserShapes.Small,
                 color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(52.dp)
             ) {
@@ -249,7 +250,7 @@ fun PetalFirstTimeDownloadEngineDialog(
                 engineModes.forEach { mode ->
                     val isSelected = mode.key.equals(selectedKey, ignoreCase = true)
                     Surface(
-                        shape = RoundedCornerShape(18.dp),
+                        shape = PetalBrowserShapes.Small,
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surfaceContainer,
                         border = androidx.compose.foundation.BorderStroke(
                             width = if (isSelected) 2.dp else 1.dp,
@@ -318,7 +319,7 @@ fun PetalFirstTimeDownloadEngineDialog(
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                 ) {
                     Text(
@@ -335,7 +336,7 @@ fun PetalFirstTimeDownloadEngineDialog(
                             ?: com.petal.browser.torrent.PetalTorrentEngineManager.TorrentEngineMode.ENGINE_1DM
                         onConfirm(chosenMode)
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary

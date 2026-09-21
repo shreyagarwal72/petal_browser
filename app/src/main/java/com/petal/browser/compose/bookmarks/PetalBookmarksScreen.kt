@@ -8,6 +8,7 @@
 
 package com.petal.browser.compose.bookmarks
 
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import android.content.Context
 import android.net.Uri
 import androidx.activity.ComponentActivity
@@ -256,7 +257,7 @@ fun PetalBookmarksScreen(
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = PetalBrowserShapes.Card,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -473,7 +474,7 @@ private fun BookmarkCardItem(
     var isFaviconError by remember(record.url) { mutableStateOf(false) }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = PetalBrowserShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -496,7 +497,7 @@ private fun BookmarkCardItem(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(PetalBrowserShapes.ExtraSmall)
                     .background(MaterialTheme.colorScheme.primary)
             ) {
                 if (!faviconUrl.isNullOrEmpty() && !isFaviconError) {
@@ -506,7 +507,7 @@ private fun BookmarkCardItem(
                         onError = { isFaviconError = true },
                         modifier = Modifier
                             .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(PetalBrowserShapes.ExtraSmall)
                     )
                 } else {
                     Icon(
@@ -537,7 +538,7 @@ private fun BookmarkCardItem(
                 if (record.isReadingList) {
                     Spacer(Modifier.height(4.dp))
                     Surface(
-                        shape = RoundedCornerShape(50),
+                        shape = PetalBrowserShapes.Pill,
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     ) {

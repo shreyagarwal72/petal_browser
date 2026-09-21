@@ -1,5 +1,6 @@
 package com.petal.browser.ui.components
 
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -76,7 +77,7 @@ fun ExpressiveFabWheel(
                             isExpanded = false
                             action.onClick()
                         },
-                        shape = RoundedCornerShape(20.dp),
+                        shape = PetalBrowserShapes.ActionCompact,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         shadowElevation = 6.dp
                     ) {
@@ -105,7 +106,7 @@ fun ExpressiveFabWheel(
         // Primary FAB Trigger
         FloatingActionButton(
             onClick = { isExpanded = !isExpanded },
-            shape = if (isExpanded) RoundedCornerShape(20.dp) else CircleShape,
+            shape = if (isExpanded) PetalBrowserShapes.Action else PetalBrowserShapes.Pill,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),

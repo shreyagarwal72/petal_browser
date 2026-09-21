@@ -39,6 +39,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.petal.browser.extensions.PetalExtensionManager
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 
 interface PetalOverflowMenuActionHandler {
@@ -372,7 +373,7 @@ fun PetalOverflowMenuSheet(
         contentAlignment = Alignment.BottomEnd
     ) {
         Card(
-            shape = RoundedCornerShape(24.dp),
+            shape = PetalBrowserShapes.MenuSurface,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface
@@ -915,7 +916,7 @@ private fun MenuRowItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(PetalBrowserShapes.ExtraSmall)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -974,7 +975,7 @@ private fun ExtensionMenuRowItem(
                     contentDescription = null,
                     modifier = Modifier
                         .size(24.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(PetalBrowserShapes.ExtraSmall)
                 )
             } else {
                 Icon(

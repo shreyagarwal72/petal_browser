@@ -31,6 +31,7 @@ import com.petal.browser.unit.HelperUnit
 import com.petal.browser.browser.AlbumController
 import com.petal.browser.view.NinjaWebView
 import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.ui.theme.PetalBrowserShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +91,7 @@ fun PetalSiteInfoBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = PetalBrowserShapes.Sheet,
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         dragHandle = {
             Box(
@@ -98,7 +99,7 @@ fun PetalSiteInfoBottomSheet(
                     .padding(vertical = 12.dp)
                     .width(42.dp)
                     .height(4.5.dp)
-                    .clip(RoundedCornerShape(50))
+                    .clip(PetalBrowserShapes.Pill)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
             )
         }
@@ -110,7 +111,7 @@ fun PetalSiteInfoBottomSheet(
         ) {
             // --- Domain & Security Header ---
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = PetalBrowserShapes.Card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -181,7 +182,7 @@ fun PetalSiteInfoBottomSheet(
 
             // --- SSL & Connection Security Card ---
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = PetalBrowserShapes.Card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -271,7 +272,7 @@ fun PetalSiteInfoBottomSheet(
             )
 
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = PetalBrowserShapes.Card,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -289,7 +290,7 @@ fun PetalSiteInfoBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(PetalBrowserShapes.ExtraSmall)
                             .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
@@ -340,7 +341,7 @@ fun PetalSiteInfoBottomSheet(
                         DropdownMenu(
                             expanded = siteResetExpanded,
                             onDismissRequest = { siteResetExpanded = false },
-                            shape = RoundedCornerShape(18.dp),
+                            shape = PetalBrowserShapes.Small,
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             DropdownMenuItem(

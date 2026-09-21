@@ -1,7 +1,7 @@
 package com.petal.browser.ui.components
 
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.shape.CircleShape
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 fun PetalThemedSnackbar(
     snackbarData: SnackbarData,
     modifier: Modifier = Modifier,
-    shape: Shape = CircleShape,
+    shape: Shape = PetalBrowserShapes.Snackbar,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     actionColor: Color = MaterialTheme.colorScheme.primary,
@@ -48,7 +48,7 @@ fun PetalThemedSnackbar(
 fun PetalThemedSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    shape: Shape = CircleShape,
+    shape: Shape = PetalBrowserShapes.Snackbar,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     actionColor: Color = MaterialTheme.colorScheme.primary

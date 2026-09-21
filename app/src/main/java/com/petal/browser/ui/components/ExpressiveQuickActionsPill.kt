@@ -9,6 +9,7 @@ import androidx.compose.foundation.background;
 import androidx.compose.foundation.clickable;
 import androidx.compose.foundation.layout.*;
 import androidx.compose.foundation.shape.RoundedCornerShape;
+import com.petal.browser.ui.theme.PetalBrowserShapes;
 import androidx.compose.material.icons.Icons;
 import androidx.compose.material.icons.rounded.*;
 import androidx.compose.material3.*;
@@ -34,7 +35,7 @@ fun ExpressiveQuickActionsPill(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = PetalBrowserShapes.QuickActions,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
         shadowElevation = 8.dp,
         modifier = modifier.height(56.dp)

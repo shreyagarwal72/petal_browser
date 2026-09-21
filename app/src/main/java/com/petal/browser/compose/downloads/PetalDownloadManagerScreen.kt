@@ -8,6 +8,7 @@
 
 package com.petal.browser.compose.downloads
 
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
@@ -643,7 +644,7 @@ private fun DownloadedImagePreviewStrip(downloads: List<DownloadItem>) {
                     }
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier
+                    Surface(shape = PetalBrowserShapes.Small, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier
                         .fillMaxWidth()
                         .height(if (images.size == 1) 220.dp else 130.dp)
                         .combinedClickable(
@@ -740,7 +741,7 @@ private fun DownloadRowItem(
                     onValueChange = { renameInput = it },
                     label = { Text("File Name") },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
@@ -781,7 +782,7 @@ private fun DownloadRowItem(
     }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = PetalBrowserShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface

@@ -55,6 +55,7 @@ import com.petal.browser.ui.components.ExpressiveHeader
 import com.petal.browser.ui.components.HeaderActionIcon
 import com.petal.browser.ui.components.M3ExpressiveVariableBackground
 import com.petal.browser.ui.theme.ExperimentalMaterial3ExpressiveApi
+import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -254,7 +255,7 @@ fun PetalHistoryScreen(
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = PetalBrowserShapes.Small,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -280,7 +281,7 @@ fun PetalHistoryScreen(
                             item(key = "clear_banner") {
                                 Surface(
                                     onClick = onClearBrowsingData,
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = PetalBrowserShapes.Small,
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -402,7 +403,7 @@ private fun HistoryCardItem(
     }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = PetalBrowserShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -429,7 +430,7 @@ private fun HistoryCardItem(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(PetalBrowserShapes.ExtraSmall)
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {

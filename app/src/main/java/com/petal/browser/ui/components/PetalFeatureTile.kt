@@ -48,6 +48,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import com.petal.browser.ui.theme.PetalBrowserShapes
 
 /**
  * PetalFeatureTile
@@ -86,7 +87,7 @@ fun PetalFeatureTile(
             .fillMaxWidth()
             .heightIn(min = 110.dp)
             .expressivePress(interactionSource),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = PetalBrowserShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = container,
             contentColor = onContainer,
