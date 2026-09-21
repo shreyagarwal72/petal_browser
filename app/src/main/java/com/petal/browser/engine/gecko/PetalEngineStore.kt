@@ -220,4 +220,49 @@ object PetalEngineStore {
             mozilla.components.browser.state.action.ReaderAction.UpdateReaderActiveAction(tabId, active)
         )
     }
+
+    @JvmStatic
+    fun activateMediaSession(context: Context, tabId: String, controller: mozilla.components.concept.engine.mediasession.MediaSession.Controller) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.ActivatedMediaSessionAction(tabId, controller))
+    }
+
+    @JvmStatic
+    fun deactivateMediaSession(context: Context, tabId: String) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.DeactivatedMediaSessionAction(tabId))
+    }
+
+    @JvmStatic
+    fun updateMediaPlaybackState(context: Context, tabId: String, state: mozilla.components.concept.engine.mediasession.MediaSession.PlaybackState) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.UpdateMediaPlaybackStateAction(tabId, state))
+    }
+
+    @JvmStatic
+    fun updateMediaPosition(context: Context, tabId: String, state: mozilla.components.concept.engine.mediasession.MediaSession.PositionState) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.UpdateMediaPositionStateAction(tabId, state))
+    }
+
+    @JvmStatic
+    fun updateMediaMetadata(context: Context, tabId: String, metadata: mozilla.components.concept.engine.mediasession.MediaSession.Metadata) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.UpdateMediaMetadataAction(tabId, metadata))
+    }
+
+    @JvmStatic
+    fun updateMediaFullscreen(context: Context, tabId: String, fullscreen: Boolean, metadata: mozilla.components.concept.engine.mediasession.MediaSession.ElementMetadata?) {
+        getStore(context).dispatch(mozilla.components.browser.state.action.MediaSessionAction.UpdateMediaFullscreenAction(tabId, fullscreen, metadata))
+    }
+
+    @JvmStatic
+    fun addOfflineArchive(context: Context, url: String, filePath: String) {
+        val file = java.io.File(filePath)
+        getStore(context).dispatch(mozilla.components.browser.state.action.DownloadAction.AddDownloadAction(
+            mozilla.components.browser.state.state.content.DownloadState(
+                url = url, fileName = file.name, contentType = "text/html",
+                contentLength = if (file.exists()) file.length() else null,
+                currentBytesCopied = if (file.exists()) file.length() else 0L,
+                status = mozilla.components.browser.state.state.content.DownloadState.Status.COMPLETED,
+                directoryPath = file.parentFile?.absolutePath ?: filePath,
+                id = "offline-${filePath.hashCode()}"
+            )
+        ))
+    }
 }

@@ -4862,6 +4862,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                     runOnUiThread(() -> {
                         NinjaToast.show(BrowserActivity.this, "Saved website to view offline!");
+                        com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(
+                                BrowserActivity.this, url, archiveFile.getAbsolutePath());
                         com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
                                 BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
                     });
