@@ -324,6 +324,24 @@ object PetalFetchDownloadBridge {
     @JvmStatic
     fun deleteDownload(context: Context, item: DownloadItem) {
         ensureInitialized(context)
+        val mozillaId = synchronized(mozillaDownloadsMap) {
+            mozillaDownloadsMap.keys.firstOrNull { it.hashCode().toLong() == item.id }
+        }
+        if (mozillaId != null) {
+            try {
+                com.petal.browser.engine.gecko.PetalEngineStore.getStore(context).dispatch(
+                    mozilla.components.browser.state.action.DownloadAction.RemoveDownloadAction(mozillaId)
+                )
+            } catch (_: Throwable) { }
+            synchronized(mozillaDownloadsMap) { mozillaDownloadsMap.remove(mozillaId) }
+            try {
+                item.localUri?.removePrefix("file://")?.let { path ->
+                    File(path).takeIf { it.exists() }?.delete()
+                }
+            } catch (_: Throwable) { }
+            publish()
+            return
+        }
         try {
             fetchInstance(context).delete(item.id.toInt())
         } catch (e: Exception) {
