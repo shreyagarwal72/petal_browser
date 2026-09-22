@@ -1,6 +1,10 @@
 package com.petal.browser.ui.components
 
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import com.petal.browser.ui.theme.PetalBrowserShapes
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,15 +32,20 @@ fun PetalThemedSnackbar(
     actionColor: Color = MaterialTheme.colorScheme.primary,
     dismissActionColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    Snackbar(
-        snackbarData = snackbarData,
+    Surface(
         modifier = modifier,
         shape = shape,
         containerColor = containerColor,
         contentColor = contentColor,
-        actionContentColor = actionColor,
-        dismissActionContentColor = dismissActionColor
-    )
+        tonalElevation = 6.dp,
+        shadowElevation = 10.dp
+    ) {
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), Arrangement.spacedBy(12.dp), androidx.compose.ui.Alignment.CenterVertically) {
+            Text(snackbarData.visuals.message, Modifier.weight(1f), color = contentColor, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+            snackbarData.visuals.actionLabel?.let { label -> TextButton(onClick = { snackbarData.performAction() }) { Text(label, color = actionColor, fontWeight = FontWeight.Bold) } }
+            if (snackbarData.visuals.withDismissAction) IconButton(onClick = { snackbarData.dismiss() }) { Icon(androidx.compose.material.icons.Icons.Rounded.Close, "Dismiss", tint = dismissActionColor) }
+        }
+    }
 }
 
 /**
