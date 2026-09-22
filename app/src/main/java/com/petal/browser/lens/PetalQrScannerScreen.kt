@@ -55,9 +55,17 @@ fun PetalQrScannerScreen(
     val closeInteraction = remember { MutableInteractionSource() }
     val flashInteraction = remember { MutableInteractionSource() }
     var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
+    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     val executor = remember { Executors.newSingleThreadExecutor() }
 
-    DisposableEffect(Unit) { onDispose { executor.shutdown() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraProvider?.unbindAll()
+            cameraControl = null
+            executor.shutdownNow()
+            (context as? com.petal.browser.activity.BrowserActivity)?.restoreBrowserInputFocus()
+        }
+    }
     LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -90,6 +98,7 @@ fun PetalQrScannerScreen(
                         val future = ProcessCameraProvider.getInstance(ctx)
                         future.addListener({
                             val provider = future.get()
+                            view.post { cameraProvider = provider }
                             val preview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
                             val analysis = ImageAnalysis.Builder()
                                 .setTargetResolution(Size(1280, 720))

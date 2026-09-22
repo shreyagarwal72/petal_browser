@@ -207,6 +207,7 @@ fun PetalLensBottomSheet(
             PetalQrScannerScreen(
                 onResult = { value ->
                     showPetalScanner = false
+                    (context as? com.petal.browser.activity.BrowserActivity)?.restoreBrowserInputFocus()
                     if (value.startsWith("http://") || value.startsWith("https://")) {
                         com.petal.browser.unit.BrowserUnit.intentURL(context, Uri.parse(value))
                     } else {
@@ -215,7 +216,10 @@ fun PetalLensBottomSheet(
                         Toast.makeText(context, "Barcode copied", Toast.LENGTH_SHORT).show()
                     }
                 },
-                onDismiss = { showPetalScanner = false }
+                onDismiss = {
+                    showPetalScanner = false
+                    (context as? com.petal.browser.activity.BrowserActivity)?.restoreBrowserInputFocus()
+                }
             )
         }
     }
