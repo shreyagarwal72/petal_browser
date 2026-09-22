@@ -573,7 +573,11 @@ fun PetalHomeScreen(
                                     shortcuts = newList
                                     saveHomeShortcuts(context, newList)
                                 } else {
-                                    // Convert to custom shortcut with new properties
+                                    // Convert the visited item to a custom shortcut and hide the
+                                    // original auto-visited URL so editing never creates a duplicate.
+                                    val newRemoved = removedUrls + current.url
+                                    removedUrls = newRemoved
+                                    saveRemovedShortcutUrls(context, newRemoved)
                                     val newList = shortcuts.toMutableList()
                                     newList.add(updatedShortcut)
                                     shortcuts = newList
@@ -673,14 +677,8 @@ private fun ShortcutTile(
     val faviconUrl = remember(shortcut.url) { getFaviconUrl(shortcut.url) }
     var isImageError by remember(shortcut.url) { mutableStateOf(false) }
 
-    // Pick a guaranteed unique Material 3 Expressive shape across all homescreen tiles
-    val totalShapes = PetalMaterialShapes.homescreenShapes.size
-    val uniqueShapeIndex = remember(index) {
-        (index % totalShapes)
-    }
-    val tileShape = remember(uniqueShapeIndex) {
-        PetalMaterialShapes.homescreenShapes[uniqueShapeIndex].toShape()
-    }
+    // Relay-inspired three-shape rhythm: positions 1/4/7, 2/5/8 and 3/6/9 repeat.
+    val tileShape = remember(index) { homeShortcutShape(index) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -714,17 +712,17 @@ private fun ShortcutTile(
                 AsyncImage(
                     model = faviconUrl,
                     contentDescription = shortcut.label,
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Crop,
                     onError = { isImageError = true },
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(40.dp)
                         .clip(tileShape)
                 )
             } else {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(38.dp)
+                                .size(40.dp)
                         .clip(tileShape)
                         .background(shortcut.containerColor.copy(alpha = 0.18f))
                 ) {
@@ -760,9 +758,7 @@ private fun AddShortcutTile(index: Int = 0, onClick: () -> Unit) {
             .homeLaunchEntrance(3 + index)
             .padding(vertical = 4.dp)
     ) {
-        val totalShapes = PetalMaterialShapes.homescreenShapes.size
-        val addShapeIndex = remember(index) { index % totalShapes }
-        val addTileShape = remember(addShapeIndex) { PetalMaterialShapes.homescreenShapes[addShapeIndex].toShape() }
+        val addTileShape = remember(index) { homeShortcutShape(index) }
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -792,6 +788,12 @@ private fun AddShortcutTile(index: Int = 0, onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+private fun homeShortcutShape(index: Int): Shape = when (index.mod(3)) {
+    0 -> PetalMaterialShapes.Flower.toShape()
+    1 -> PetalMaterialShapes.Cookie7Sided.toShape()
+    else -> PetalMaterialShapes.Gem.toShape()
 }
 
 // ── 6. Search Bar ─────────────────────────────────────────────────────────
@@ -1189,13 +1191,7 @@ private fun EditShortcutDialog(
                 )
 
                 // Live Preview with automatic thumbnail showcasing Material 3 Expressive shapes
-                val previewShapeIndex = remember(nameText, urlText) {
-                    val hash = (nameText.hashCode() * 31 + urlText.hashCode()).let { if (it == Int.MIN_VALUE) 0 else Math.abs(it) }
-                    hash % PetalMaterialShapes.homescreenShapes.size
-                }
-                val previewTileShape = remember(previewShapeIndex) {
-                    PetalMaterialShapes.homescreenShapes[previewShapeIndex].toShape()
-                }
+                val previewTileShape = remember { homeShortcutShape(0) }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1225,10 +1221,10 @@ private fun EditShortcutDialog(
                             AsyncImage(
                                 model = currentFaviconUrl,
                                 contentDescription = nameText,
-                                contentScale = ContentScale.Fit,
+                                contentScale = ContentScale.Crop,
                                 onError = { isImageError = true },
                                 modifier = Modifier
-                                    .size(28.dp)
+                                    .size(34.dp)
                                     .clip(previewTileShape)
                             )
                         } else {
