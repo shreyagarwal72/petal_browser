@@ -24,7 +24,7 @@ object PetalWritingToolsBar {
         preferences.registerOnSharedPreferenceChangeListener { _, key -> if (key == PREF) ViewCompat.getRootWindowInsets(host)?.let(::update) }
     }
 
-    fun update(host: ViewGroup, i: WindowInsetsCompat) {
+    @JvmStatic fun update(host: ViewGroup, i: WindowInsetsCompat) {
         for (n in 0 until host.childCount) {
             val child = host.getChildAt(n)
             if (child is LinearLayout && child.tag == "petal_writing_tools") {
