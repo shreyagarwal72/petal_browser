@@ -449,6 +449,7 @@ fun PetalOmniboxPage(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .imePadding()
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
@@ -498,7 +499,7 @@ fun PetalOmniboxPage(
                                             }) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.CenterFocusWeak,
-                                                    contentDescription = "Google Lens Search",
+                                                    contentDescription = "Petal QR Scanner",
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -1171,4 +1172,3 @@ fun PetalOmniboxPage(
         )
     }
 }
-
