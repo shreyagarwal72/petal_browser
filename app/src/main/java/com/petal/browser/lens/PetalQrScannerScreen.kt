@@ -151,7 +151,7 @@ fun PetalQrScannerScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).align(Alignment.Center)
-                    }
+            )
         } else {
             Text("Camera permission is required", color = Color.White, modifier = Modifier.align(Alignment.Center))
         }
