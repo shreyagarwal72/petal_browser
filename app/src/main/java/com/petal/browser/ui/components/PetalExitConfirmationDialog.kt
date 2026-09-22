@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.view.Window
 import android.view.WindowManager
 import androidx.compose.foundation.layout.*
@@ -31,6 +32,6 @@ object PetalExitConfirmationDialog {
             setViewTreeLifecycleOwner(activity); setViewTreeViewModelStoreOwner(activity); setViewTreeSavedStateRegistryOwner(activity)
             setContent { PetalExpressiveTheme { BasicAlertDialog(onDismissRequest = { dialog.dismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) { Surface(Modifier.fillMaxWidth().padding(16.dp), RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 6.dp) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.error) }; Text("Leave Petal Browser?", style = MaterialTheme.typography.headlineSmall); Text("Do you want to exit the browser?", color = MaterialTheme.colorScheme.onSurfaceVariant); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = { dialog.dismiss() }) { Text("Stay") }; Button(onClick = { dialog.dismiss(); onExit.run() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Exit") } } } } } } }
         }
-        dialog.setContentView(view); dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); dialog.window?.setDimAmount(.68f); dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); dialog.window?.setLayout((activity.resources.displayMetrics.widthPixels * .88f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT) }; dialog.show()
+        dialog.setContentView(view); dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); dialog.window?.setDimAmount(.68f); dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND); dialog.window?.setBackgroundBlurRadius(34) }; dialog.window?.setLayout((activity.resources.displayMetrics.widthPixels * .88f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT) }; dialog.show()
     }
 }
