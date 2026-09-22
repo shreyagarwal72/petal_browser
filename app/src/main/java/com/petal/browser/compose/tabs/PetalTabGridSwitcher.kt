@@ -738,6 +738,7 @@ fun PetalTabGridSwitcher(
                                     ) {
                                         PetalTabCard(
                                             tab = tab,
+                                            tabPosition = visibleTabs.indexOf(tab) + 1,
                                             accentColor = accentColor,
                                             isDragging = isCurrentDragging,
                                             dragOffset = if (isCurrentDragging) dragOffset else Offset.Zero,
@@ -1248,6 +1249,7 @@ private fun TabManagerEmptyState(
 @Composable
 private fun PetalTabCard(
     tab: PetalTabItem,
+    tabPosition: Int = 0,
     accentColor: Color,
     isDragging: Boolean = false,
     dragOffset: Offset = Offset.Zero,
@@ -1358,6 +1360,21 @@ private fun PetalTabCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (tabPosition > 0) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (tab.isIncognito) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(22.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = tabPosition.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (tab.isIncognito) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
                     TabFavicon(tab = tab, accentColor = accentColor, size = 16.dp)
                     Text(
                         text = if (tab.title.isBlank()) "New Tab" else tab.title,
