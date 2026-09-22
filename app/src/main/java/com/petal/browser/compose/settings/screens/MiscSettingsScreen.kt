@@ -40,8 +40,6 @@ fun MiscSettingsScreen(
     val context = LocalContext.current
     val preferences = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var writingToolsBar by remember { mutableStateOf(preferences.getBoolean("sp_writing_tools_bar", true)) }
-    val preferences = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    var writingToolsBar by remember { mutableStateOf(preferences.getBoolean("sp_writing_tools_bar", true)) }
     val autoOpenApps by viewModel.autoOpenApps.collectAsStateWithLifecycle()
     val checkUpdateOnLaunch by viewModel.checkUpdateOnLaunch.collectAsStateWithLifecycle()
     val downloadManagerMode by viewModel.downloadManagerMode.collectAsStateWithLifecycle()
