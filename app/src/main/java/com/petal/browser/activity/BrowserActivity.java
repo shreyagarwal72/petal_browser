@@ -910,8 +910,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        if (sp.getBoolean("sp_check_update_on_launch", true)) {
-            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
+        // Automatic Google Play Store update check on launch (Material 3 Expressive UI)
+        try {
+            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).checkForUpdates(this, true);
+        } catch (Exception e) {
+            android.util.Log.w("BrowserActivity", "Could not check for Play Store updates", e);
         }
 
         // Tab Session Restoration & Rehydration
