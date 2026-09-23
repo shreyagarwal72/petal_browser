@@ -1,5 +1,6 @@
 package com.petal.browser.pwa;
 
+import com.petal.browser.view.NinjaToast;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -328,7 +329,7 @@ public class PetalPwaManager {
         }
 
         if (pageUrl == null || pageUrl.trim().isEmpty() || "about:blank".equalsIgnoreCase(pageUrl.trim()) || pageUrl.startsWith("petal://")) {
-            activity.runOnUiThread(() -> Toast.makeText(activity, "Cannot install empty page as app", Toast.LENGTH_SHORT).show());
+            activity.runOnUiThread(() -> NinjaToast.show(activity, "Cannot install empty page as app", Toast.LENGTH_SHORT));
             return;
         }
 
@@ -393,6 +394,17 @@ public class PetalPwaManager {
                     try {
                         if (webView != null) {
                             webView.saveWebArchive(archiveFile.getAbsolutePath(), false, null);
+                            com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(activity, targetUrl, archiveFile.getAbsolutePath(), title);
+                        } else if (geckoView != null) {
+                            try {
+                                java.io.FileOutputStream fos = new java.io.FileOutputStream(archiveFile);
+                                geckoView.printToPdf(fos, success -> {
+                                    if (Boolean.TRUE.equals(success)) {
+                                        com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(activity, targetUrl, archiveFile.getAbsolutePath(), title);
+                                    }
+                                    return kotlin.Unit.INSTANCE;
+                                });
+                            } catch (Exception ignored) {}
                         }
                     } catch (Exception e) {
                         Log.w(TAG, "saveWebArchive: " + e.getMessage());
@@ -432,10 +444,10 @@ public class PetalPwaManager {
                     }
                 }
 
-                activity.runOnUiThread(() -> Toast.makeText(activity, "Installed \"" + title + "\" to Home Screen", Toast.LENGTH_SHORT).show());
+                activity.runOnUiThread(() -> NinjaToast.show(activity, "Installed \"" + title + "\" to Home Screen", Toast.LENGTH_SHORT));
             } catch (Exception e) {
                 Log.e(TAG, "Error installing PWA shortcut", e);
-                activity.runOnUiThread(() -> Toast.makeText(activity, "Could not install app shortcut", Toast.LENGTH_SHORT).show());
+                activity.runOnUiThread(() -> NinjaToast.show(activity, "Could not install app shortcut", Toast.LENGTH_SHORT));
             }
         }).start();
     }
