@@ -1,5 +1,6 @@
 package com.petal.browser.view
 
+import com.petal.browser.view.NinjaToast;
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
@@ -161,6 +162,9 @@ class PetalGeckoView @JvmOverloads constructor(
     private var mediaBridge: PetalMediaBridge? = null
     private var pwaManager: PetalPwaManager? = null
     private var onScrollChangeListener: OnScrollChangeListener? = null
+    var onPageProgressChanged: ((Int) -> Unit)? = null
+    var onPageTitleChanged: ((String) -> Unit)? = null
+    var onPageSecurityChanged: ((Boolean) -> Unit)? = null
     private var lastScrollHapticY: Int = 0
     private var currentScrollY: Int = 0
     private var currentScrollX: Int = 0
@@ -260,6 +264,7 @@ class PetalGeckoView @JvmOverloads constructor(
             override fun onProgressChange(session: GeckoSession, progress: Int) {
                 currentProgress = progress
                 updateProgress(progress)
+                onPageProgressChanged?.invoke(progress)
                 if (engineSession != null) {
                     com.petal.browser.engine.gecko.PetalEngineStore.updateProgress(context, tabId, progress)
                 }
@@ -270,6 +275,7 @@ class PetalGeckoView @JvmOverloads constructor(
 
             override fun onSecurityChange(session: GeckoSession, securityInfo: GeckoSession.ProgressDelegate.SecurityInformation) {
                 currentSecurityInfo = securityInfo
+                onPageSecurityChanged?.invoke(securityInfo.isSecure)
             }
         }
 
@@ -515,6 +521,7 @@ class PetalGeckoView @JvmOverloads constructor(
                 title?.let {
                     currentTitle = it
                     album.setAlbumTitle(it, currentUrl)
+                    onPageTitleChanged?.invoke(it)
                     if (engineSession != null) {
                         com.petal.browser.engine.gecko.PetalEngineStore.updateUrlAndTitle(context, tabId, currentUrl, it)
                     }
@@ -2054,11 +2061,11 @@ class PetalGeckoView @JvmOverloads constructor(
                 // Friendly torrent/magnet handler when no dedicated torrent client is installed
                 val clipboard = act.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
                 clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Magnet Link", url))
-                android.widget.Toast.makeText(
+                NinjaToast.show(
                     act,
                     "Magnet link copied to clipboard (install a torrent client to open directly)",
                     android.widget.Toast.LENGTH_LONG
-                ).show()
+                )
                 return true
             }
         } catch (_: Exception) {}
@@ -2068,11 +2075,11 @@ class PetalGeckoView @JvmOverloads constructor(
         // try to render it as a webpage (it will just fail and can leave a broken tab).
         // Block the load and tell the user instead.
         try {
-            android.widget.Toast.makeText(
+            NinjaToast.show(
                 act,
                 "No app found to open this link",
                 android.widget.Toast.LENGTH_SHORT
-            ).show()
+            )
         } catch (_: Exception) {}
 
         return true
