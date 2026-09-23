@@ -38,8 +38,6 @@ fun MiscSettingsScreen(
     viewModel: MiscSettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val preferences = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    var writingToolsBar by remember { mutableStateOf(preferences.getBoolean("sp_writing_tools_bar", true)) }
     val autoOpenApps by viewModel.autoOpenApps.collectAsStateWithLifecycle()
     val checkUpdateOnLaunch by viewModel.checkUpdateOnLaunch.collectAsStateWithLifecycle()
     val downloadManagerMode by viewModel.downloadManagerMode.collectAsStateWithLifecycle()
@@ -117,10 +115,6 @@ fun MiscSettingsScreenContent(
                 SettingsCategoryCard(title = "Download deletion", icon = Icons.Rounded.Delete, cardId = "misc_download_delete", targetHighlightId = targetHighlightItemId) {
                     ToggleRow(title = "Confirm file deletion", subtitle = "Ask before removing a download from the device", icon = Icons.Rounded.HelpOutline, checked = confirmFileDelete, onCheckedChange = { confirmFileDelete = it; preferences.edit().putBoolean("sp_confirm_download_delete", it).apply() })
                     ToggleRow(title = "Delete file from storage", subtitle = "Use this as the default choice when deleting a download", icon = Icons.Rounded.DeleteForever, checked = deleteFromStorage, onCheckedChange = { deleteFromStorage = it; preferences.edit().putBoolean("sp_delete_download_file", it).apply() })
-                }
-
-                SettingsCategoryCard(title = "Writing tools", icon = Icons.Rounded.Edit, cardId = "misc_writing_tools", targetHighlightId = targetHighlightItemId) {
-                    ToggleRow(title = "Keyboard writing tools", subtitle = "Show an editing toolbar above the keyboard for text fields", icon = Icons.Rounded.Keyboard, checked = writingToolsBar, onCheckedChange = { writingToolsBar = it; preferences.edit().putBoolean("sp_writing_tools_bar", it).apply() })
                 }
 
                 // Default Download Manager Card
@@ -432,7 +426,7 @@ fun MiscSettingsScreenContent(
                     listOf(
                         PetalLensManager.SnapProvider.ASK to "Ask every time",
                         PetalLensManager.SnapProvider.GOOGLE_LENS to "Google Lens",
-                        PetalLensManager.SnapProvider.PETAL_SCANNER to "Petal Scanner"
+                        PetalLensManager.SnapProvider.PETAL_SCANNER to "Petal QR Scanner"
                     ).forEach { (provider, label) ->
                         Row(
                             modifier = Modifier.fillMaxWidth().clickable { onSnapProviderChange(provider) },
@@ -461,38 +455,6 @@ fun MiscSettingsScreenContent(
                         checked = autoOpenApps,
                         onCheckedChange = onAutoOpenAppsChange
                     )
-                }
-
-                // App Updates & Google Play Card (Play Store variant)
-                SettingsCategoryCard(
-                    title = "App Updates & Google Play",
-                    icon = Icons.Rounded.SystemUpdate,
-                    cardId = "misc_updates",
-                    targetHighlightId = targetHighlightItemId
-                ) {
-                    ToggleRow(
-                        title = "Automatic Play Store updates",
-                        subtitle = "Check for Google Play updates automatically when starting Petal",
-                        icon = Icons.Rounded.PlayArrow,
-                        checked = checkUpdateOnLaunch,
-                        onCheckedChange = onCheckUpdateOnLaunchChange
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        onClick = {
-                            (context as? androidx.activity.ComponentActivity)?.let { act ->
-                                com.petal.browser.update.PetalPlayUpdateManager.getInstance(act).checkForUpdates(act, false)
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Rounded.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Check for Updates Now", fontWeight = FontWeight.Bold)
-                    }
                 }
 
                 Spacer(Modifier.height(32.dp))

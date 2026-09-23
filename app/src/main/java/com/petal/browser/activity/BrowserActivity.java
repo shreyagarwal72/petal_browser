@@ -61,7 +61,6 @@ import android.text.TextWatcher;
 import com.petal.browser.compose.downloads.PetalDownloadBridge;
 import com.petal.browser.compose.home.PetalComposeBridge;
 import com.petal.browser.compose.home.PetalHomeActionHandler;
-import com.petal.browser.ui.components.PetalWritingToolsBar;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
@@ -267,6 +266,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public boolean suppressResumeDispatch = false;
     public boolean isAppLockLocked = false;
     private boolean launchRippleTriggered = false;
+    /** True while the launch ripple is waiting to be fired from the splash-screen exit animation. */
+    private boolean splashRipplePending = false;
 
     public static boolean isExternalOrWidgetLaunch(Intent intent) {
         if (intent == null) return false;
@@ -565,7 +566,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
+        final androidx.core.splashscreen.SplashScreen splashScreen =
+                androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         context = this;
         activity = this;
@@ -583,6 +585,25 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
         
         sp = PreferenceManager.getDefaultSharedPreferences(context);
+
+        // Blend the splash exit with the launch ripple: on a fresh launch the splash icon scales/fades out while
+        // the liquid ripple radiates from the icon's centre. Uses the same conditions as the launch ripple further
+        // below, which is skipped once this is armed. A timed fallback covers launches where no splash is shown.
+        if (savedInstanceState == null
+                && sp.getBoolean("sp_launch_ripple_enabled", true)
+                && !sp.getBoolean("sp_app_lock_enabled", false)
+                && !isExternalOrWidgetLaunch(getIntent())) {
+            launchRippleTriggered = true;
+            splashRipplePending = true;
+            splashScreen.setOnExitAnimationListener(this::playSplashExitWithRipple);
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (splashRipplePending && !isFinishing() && !isDestroyed()) {
+                    splashRipplePending = false;
+                    com.petal.browser.ui.layout.LiquidRippleEffect.trigger(getWindow().getDecorView());
+                }
+            }, 2500L);
+        }
+
         com.petal.browser.unit.PetalSessionHistoryManager.initSession();
         com.petal.browser.extensions.PetalExtensionManager.attach(context);
         com.petal.browser.extensions.PetalBuiltInExtensionManager.installAll(context);
@@ -664,7 +685,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     new java.util.function.Consumer<String>() {
                         @Override
                         public void accept(String error) {
-                            Toast.makeText(BrowserActivity.this, "Authentication required: " + error, Toast.LENGTH_SHORT).show();
+                            NinjaToast.show(BrowserActivity.this, "Authentication required: " + error, Toast.LENGTH_SHORT);
                             finish();
                         }
                     }
@@ -840,10 +861,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     applyBottomBarVisibilityForSurface();
                 }
             }
-            PetalWritingToolsBar.update((ViewGroup) v, insets);
             return insets;
         });
-        PetalWritingToolsBar.attach(this, (ViewGroup) predictiveBackRoot, sp);
 
         MaterialAlertDialogBuilder builderOverview = new MaterialAlertDialogBuilder(context);
         View dialogViewOverview = View.inflate(context, R.layout.dialog_overview, null);
@@ -865,7 +884,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 try {
                     String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) + "?";
                     View anchor = contentFrame != null ? contentFrame : getWindow().getDecorView();
-                    Snackbar snackbar = Snackbar.make(anchor, text, Snackbar.LENGTH_LONG);
+                    Snackbar snackbar = HelperUnit.makePetalSnackbar(anchor, text, Snackbar.LENGTH_LONG);
                     HelperUnit.makeSnackbarRound(snackbar);
                     snackbar.setAction(context.getString(R.string.app_ok), v -> showDownloads());
                     snackbar.show();
@@ -1044,7 +1063,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             sp.edit().putBoolean("pdf_create", false).apply();
             String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) +"?";
             View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView : findViewById(android.R.id.content));
-            Snackbar snackbar = Snackbar.make(anchor, text, Snackbar.LENGTH_SHORT);
+            Snackbar snackbar = HelperUnit.makePetalSnackbar(anchor, text, Snackbar.LENGTH_SHORT);
             HelperUnit.makeSnackbarRound(snackbar);
             snackbar.setAction(context.getString(R.string.app_ok), v -> showDownloads());
             snackbar.show();
@@ -1303,7 +1322,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
     private void showExitConfirmationDialog() {
         if (isFinishing() || isDestroyed()) return;
-        com.petal.browser.ui.components.PetalExitConfirmationDialog.show(this, () -> finishAndRemoveTask());
+        com.petal.browser.ui.components.PetalExitConfirmationDialog.show(this,
+                () -> finishAndRemoveTask());
         lastBackPressTime = 0L;
     }
 
@@ -1528,7 +1548,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             if (isPipSupported && hasMediaPlaying) {
                 if (!isPipPermissionAsked) {
                     sp.edit().putBoolean("sp_pip_asked", true).apply();
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                    MaterialAlertDialogBuilder pipBuilder = new MaterialAlertDialogBuilder(this)
+                            .setIcon(com.petal.browser.R.drawable.icon_alert)
                             .setTitle("Picture-in-Picture Permission")
                             .setMessage("Would you like Petal Browser to automatically enter Picture-in-Picture mode when minimizing the app during video playback?")
                             .setPositiveButton("Allow", (dialog, which) -> {
@@ -1537,8 +1558,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             })
                             .setNegativeButton("Don't Allow", (dialog, which) -> {
                                 sp.edit().putBoolean("sp_auto_pip", false).apply();
-                            })
-                            .show();
+                            });
+                    androidx.appcompat.app.AlertDialog pipDialog = pipBuilder.create();
+                    HelperUnit.setupDialog(this, pipDialog);
+                    pipDialog.show();
                 } else if (isAutoPipEnabled) {
                     triggerSystemPipMode();
                 }
@@ -3465,7 +3488,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                 popup.setOnMenuItemClickListener(item -> {
                     if (item.getItemId() == R.id.menu_delete) {
-                        Snackbar snackbarBottom = Snackbar.make(bottom_navigation, R.string.hint_database, Snackbar.LENGTH_SHORT);
+                        Snackbar snackbarBottom = HelperUnit.makePetalSnackbar(bottom_navigation, R.string.hint_database, Snackbar.LENGTH_SHORT);
                         HelperUnit.makeSnackbarRound(snackbarBottom);
                         snackbarBottom.setAction(context.getString(R.string.app_ok), (v -> {
                             if (overViewTab.equals(getString(R.string.album_title_bookmarks))) {
@@ -5086,7 +5109,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             setProfileIcon(buttonProfile, url);
             buttonProfile.setOnClickListener(v -> {
                 String cat = "    ¯\\_(ツ)_/¯    ";
-                Snackbar snackbar = Snackbar.make(dialogViewFastToggle, cat, Snackbar.LENGTH_LONG);
+                Snackbar snackbar = HelperUnit.makePetalSnackbar(dialogViewFastToggle, cat, Snackbar.LENGTH_LONG);
                 HelperUnit.makeSnackbarRound(snackbar);
                 snackbar.show();
             });
@@ -6000,7 +6023,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         "html", "txt", "xml", "json", "java", "md", "js", "css", "sh", "py", "org", "gpx"
                 );
                 if (!allowedExtensions.contains(extension)) {
-                    Toast.makeText(this, getString(R.string.dialog_supported), Toast.LENGTH_SHORT).show();
+                    NinjaToast.show(this, getString(R.string.dialog_supported), Toast.LENGTH_SHORT);
                     getIntent().setAction("");
                     getIntent().setData(null);
                     return;
@@ -6466,7 +6489,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         sp.edit().putInt("restart_changed", 0).putBoolean("restoreOnRestart", true).apply();
         saveOpenedTabs();
         View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView : findViewById(android.R.id.content));
-        Snackbar snackbar = Snackbar.make(anchor, R.string.toast_restart, Snackbar.LENGTH_SHORT);
+        Snackbar snackbar = HelperUnit.makePetalSnackbar(anchor, R.string.toast_restart, Snackbar.LENGTH_SHORT);
         HelperUnit.makeSnackbarRound(snackbar);
         snackbar.setAction(context.getString(R.string.app_ok), (v -> {
             PackageManager packageManager = context.getPackageManager();
