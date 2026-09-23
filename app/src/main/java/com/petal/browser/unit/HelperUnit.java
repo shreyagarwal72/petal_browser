@@ -211,7 +211,7 @@ public class HelperUnit {
                                 fos.flush();
                                 fos.close();
                                 String text = activity.getString(R.string.app_done) + ". " + activity.getString(R.string.menu_download) +"?";
-                                Snackbar snackbar = Snackbar.make(BrowserActivity.getView(), text, Snackbar.LENGTH_LONG);
+                                Snackbar snackbar = makePetalSnackbar(BrowserActivity.getView(), text, Snackbar.LENGTH_LONG);
                                 snackbar.setAction(activity.getString(R.string.app_ok), v -> {
                                     if (activity instanceof com.petal.browser.activity.BrowserActivity) {
                                         ((com.petal.browser.activity.BrowserActivity) activity).showDownloads();
@@ -241,7 +241,7 @@ public class HelperUnit {
                             }
                         } catch (Exception e) {
                             System.out.println("Error Downloading File: " + e);
-                            Toast.makeText(activity, activity.getString(R.string.app_error) + e.toString().substring(e.toString().indexOf(":")), Toast.LENGTH_LONG).show();
+                            NinjaToast.show(activity, activity.getString(R.string.app_error) + e.toString().substring(e.toString().indexOf(":")), Toast.LENGTH_LONG);
                             Log.i(TAG, "shouldOverrideUrlLoading Exception:" + e);
                         }
                         try {
@@ -463,6 +463,17 @@ public class HelperUnit {
         }
     }
 
+    private static int getThemeColor(Context context, int attr, int fallback) {
+        TypedValue value = new TypedValue();
+        if (context != null && context.getTheme().resolveAttribute(attr, value, true)) {
+            if (value.resourceId != 0) {
+                try { return context.getResources().getColor(value.resourceId); } catch (Exception ignored) {}
+            }
+            if (value.data != 0) return value.data;
+        }
+        return fallback;
+    }
+
     public static void setupDialog(Context context, Dialog dialog) {
         try {
             if (dialog == null) return;
@@ -486,8 +497,12 @@ public class HelperUnit {
                 android.graphics.drawable.GradientDrawable backgroundDrawable = new android.graphics.drawable.GradientDrawable();
                 backgroundDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                 backgroundDrawable.setColor(surfaceColor != 0 ? surfaceColor : android.graphics.Color.parseColor("#1C1B1F"));
-                backgroundDrawable.setCornerRadius(HelperUnit.convertDpToPixel(28f, context));
+                backgroundDrawable.setCornerRadius(HelperUnit.convertDpToPixel(32f, context));
+                backgroundDrawable.setStroke(HelperUnit.convertDpToPixel(1f, context), getThemeColor(context, com.google.android.material.R.attr.colorOutlineVariant, Color.TRANSPARENT));
                 dialog.getWindow().setBackgroundDrawable(backgroundDrawable);
+                dialog.getWindow().setDimAmount(0.32f);
+                dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+                dialog.getWindow().getDecorView().setElevation(HelperUnit.convertDpToPixel(12f, context));
             }
         } catch (Exception ignored) {}
     }
@@ -734,51 +749,103 @@ public class HelperUnit {
         }
 
         layout.addView(customView, 0);
+        ViewGroup.LayoutParams rawParams = snackbar.getView().getLayoutParams();
+        if (rawParams instanceof android.view.ViewGroup.MarginLayoutParams) {
+            android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) rawParams;
+            params.leftMargin = convertDpToPixel(16, parentView.getContext());
+            params.rightMargin = convertDpToPixel(16, parentView.getContext());
+            params.bottomMargin = convertDpToPixel(8, parentView.getContext());
+            snackbar.getView().setLayoutParams(params);
+        }
+        snackbar.getView().setElevation(convertDpToPixel(8, parentView.getContext()));
         snackbar.show();
     }
-    public static void makeSnackbarRound (Snackbar snackbar) {
+    /**
+     * Creates every legacy View-system Snackbar through the same Petal M3 Expressive surface.
+     * Keeping this centralized prevents individual features from drifting visually.
+     */
+    public static Snackbar makePetalSnackbar(View parent, CharSequence text, int duration) {
+        Snackbar snackbar = Snackbar.make(parent, text, duration);
+        makeSnackbarRound(snackbar);
+        return snackbar;
+    }
+
+    public static Snackbar makePetalSnackbar(View parent, int textResId, int duration) {
+        Snackbar snackbar = Snackbar.make(parent, textResId, duration);
+        makeSnackbarRound(snackbar);
+        return snackbar;
+    }
+
+    public static void makeSnackbarRound(Snackbar snackbar) {
         View snackbarView = snackbar.getView();
         Context context = snackbarView.getContext();
 
+        // Material 3 Expressive tonal surface: inverseSurface / dark container pill
         TypedValue surfaceValue = new TypedValue();
-        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, surfaceValue, true);
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceInverse, surfaceValue, true);
         if (surfaceValue.data == 0) {
-            context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHigh, surfaceValue, true);
+            context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHighest, surfaceValue, true);
         }
-        int backgroundColor = surfaceValue.data != 0 ? surfaceValue.data : Color.parseColor("#2B2D30");
+        int backgroundColor = surfaceValue.data != 0 ? surfaceValue.data : Color.parseColor("#2F2F33");
 
+        // High contrast on-surface text: colorOnSurfaceInverse / white
         TypedValue onSurfaceValue = new TypedValue();
-        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurfaceValue, true);
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceInverse, onSurfaceValue, true);
+        if (onSurfaceValue.data == 0) {
+            context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurfaceValue, true);
+        }
         int textColor = onSurfaceValue.data != 0 ? onSurfaceValue.data : Color.WHITE;
+
+        // Outline stroke color
+        TypedValue outlineValue = new TypedValue();
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOutlineVariant, outlineValue, true);
+        int strokeColor = outlineValue.data != 0 ? outlineValue.data : Color.parseColor("#44474E");
 
         TextView textView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
         if (textView != null) {
-            textView.setMaxLines(30);
+            textView.setMaxLines(4);
+            textView.setEllipsize(TextUtils.TruncateAt.END);
             textView.setTextColor(textColor);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
             textView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            textView.setGravity(Gravity.CENTER_VERTICAL);
         }
 
         TextView actionView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_action);
         if (actionView != null) {
-            TypedValue primaryValue = new TypedValue();
-            context.getTheme().resolveAttribute(android.R.attr.colorPrimary, primaryValue, true);
-            if (primaryValue.data == 0) {
-                context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSecondary, primaryValue, true);
+            TypedValue primaryInverse = new TypedValue();
+            context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryInverse, primaryInverse, true);
+            if (primaryInverse.data == 0) {
+                context.getTheme().resolveAttribute(android.R.attr.colorPrimary, primaryInverse, true);
             }
-            if (primaryValue.data != 0) {
-                actionView.setTextColor(primaryValue.data);
-                actionView.setTypeface(Typeface.DEFAULT_BOLD);
-            }
+            int actionColor = primaryInverse.data != 0 ? primaryInverse.data : Color.parseColor("#FFB1C8");
+            actionView.setTextColor(actionColor);
+            actionView.setTypeface(Typeface.DEFAULT_BOLD);
+            actionView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
         }
 
+        // Pill shape with subtle outline for Material 3 Expressive popups
         GradientDrawable background = new GradientDrawable();
         background.setShape(GradientDrawable.RECTANGLE);
         float radiusPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 28, context.getResources().getDisplayMetrics());
         background.setCornerRadius(radiusPx);
         background.setColor(backgroundColor);
+        background.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, context.getResources().getDisplayMetrics()), strokeColor);
         snackbarView.setBackground(background);
-        snackbarView.setElevation(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, context.getResources().getDisplayMetrics()));
-        snackbar.setTextMaxLines(100);
+        snackbarView.setElevation(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, context.getResources().getDisplayMetrics()));
+
+        // Inset margins so the snackbar floats cleanly above navigation bars and omnibox
+        int horizontal = convertDpToPixel(20, context);
+        int bottom = convertDpToPixel(24, context);
+        ViewGroup.LayoutParams rawParams = snackbarView.getLayoutParams();
+        if (rawParams instanceof android.view.ViewGroup.MarginLayoutParams) {
+            android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) rawParams;
+            params.leftMargin = horizontal;
+            params.rightMargin = horizontal;
+            params.bottomMargin = bottom;
+            snackbarView.setLayoutParams(params);
+        }
+        snackbar.setTextMaxLines(4);
     }
 
     public static void copy(Context context, String text) {
