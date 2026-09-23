@@ -142,7 +142,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.petal.browser.R;
 import com.petal.browser.browser.AlbumController;
-import com.petal.browser.browser.BannerBlock;
 import com.petal.browser.browser.BrowserContainer;
 import com.petal.browser.browser.BrowserController;
 import com.petal.browser.browser.DataURIParser;
@@ -714,7 +713,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
 
         try {
-            new BannerBlock(context);
+            com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(context);
         } catch (Exception ignored) {}
         HelperUnit.initTheme(activity);
         com.petal.browser.account.GoogleAccountManager.INSTANCE.init(this);
@@ -910,11 +909,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        // Automatic Google Play Store update check on launch (Material 3 Expressive UI)
-        try {
-            com.petal.browser.update.PetalPlayUpdateManager.getInstance(this).checkForUpdates(this, true);
-        } catch (Exception e) {
-            android.util.Log.w("BrowserActivity", "Could not check for Play Store updates", e);
+        if (sp.getBoolean("sp_check_update_on_launch", true)) {
+            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
         }
 
         // Tab Session Restoration & Rehydration
