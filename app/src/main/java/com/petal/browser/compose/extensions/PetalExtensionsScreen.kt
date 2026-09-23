@@ -374,6 +374,15 @@ fun PetalExtensionsScreen(
     pendingPrompt?.let { prompt ->
         InstallPermissionDialog(prompt = prompt)
     }
+
+    pendingPopup?.let { popup ->
+        PetalExtensionPopupScreen(
+            popup = popup,
+            onDismiss = {
+                PetalExtensionManager.dismissPopup()
+            }
+        )
+    }
 }
 
 @Composable
@@ -557,7 +566,7 @@ private fun AddExtensionSheet(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Installs real Firefox add-ons (.xpi) from addons.mozilla.org.",
+                "Installs compatible Firefox WebExtensions (.xpi) from AMO or a secure direct download URL.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -679,7 +688,7 @@ private fun AddExtensionSheet(
             onDismissRequest = { showMozillaCatalogPrompt = false },
             icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
             title = { Text("Find Firefox extensions") },
-            text = { Text("Browse Mozilla Android add-ons, then paste an add-on page or download link here to install it.") },
+            text = { Text("Browse Mozilla add-ons or paste a secure .xpi download link. Petal will let GeckoView validate compatibility, signatures, permissions, and the Mozilla blocklist.") },
             confirmButton = { TextButton(onClick = {
                 showMozillaCatalogPrompt = false
                 // foreground=true - otherwise this silently opens a background tab while the
@@ -828,14 +837,12 @@ private fun InstallPermissionDialog(prompt: PetalExtensionManager.PendingPrompt)
  *
  * Key features:
  *  - **Full-screen toggle** — Bitwarden and similar vault UIs need room to browse items;
- *    a single tap on the expand icon switches the sheet between compact (65 % height) and
- *    full-screen modes without losing the Gecko session.
+ *    a single tap on the expand icon switches between compact (65 %) and full-screen modes.
  *  - **Text input prompt support** — master-password / PIN dialogs inside extension popups
  *    are routed through a native Material 3 AlertDialog so the system keyboard appears
  *    correctly and the user can actually type into them.
  *  - **Clipboard auto-allow** — extensions that write to the clipboard (e.g. Bitwarden
- *    "Copy password") receive silent ALLOW so the copy works without a prompt interrupting
- *    the autofill flow. Read access is also silently granted to support paste-into-field.
+ *    "Copy password") receive silent ALLOW so the copy works without a permission prompt.
  *  - **Zoom controls** — pinch-unfriendly popups can be rescaled with ± buttons.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -957,6 +964,21 @@ fun PetalExtensionPopupScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
+                        // Open Settings / Options page button if available
+                        IconButton(
+                            onClick = {
+                                onDismiss()
+                                PetalExtensionManager.openOptionsPage(popup.extensionId, context)
+                            },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = "Extension Settings",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         // Full-screen / collapse toggle — especially useful for Bitwarden
                         // vault browsing where the compact height is too tight to show items.
                         IconButton(
@@ -1000,13 +1022,15 @@ fun PetalExtensionPopupScreen(
                                 isFocusable = true
                                 isFocusableInTouchMode = true
 
-                                // The ActionDelegate now returns this session while it is still
-                                // unopened. Open it exactly once here, after Gecko accepted it.
-                                if (!popup.session.isOpen) {
-                                    val runtime = PetalGeckoRuntime.getOrCreate(ctx.applicationContext)
-                                    popup.session.open(runtime)
+                                // The popup session is opened by PetalExtensionManager before
+                                // it is returned to GeckoView. Do not open it again from the
+                                // Compose factory: doing so races Gecko's popup lifecycle and
+                                // can leave the browser waiting indefinitely.
+                                try {
+                                    popup.session.setActive(true)
+                                } catch (_: Throwable) {
+                                    // The session may still be completing its asynchronous open.
                                 }
-                                popup.session.setActive(true)
 
                                 popup.session.contentDelegate = object : GeckoSession.ContentDelegate {
                                     override fun onCloseRequest(session: GeckoSession) {
@@ -1036,7 +1060,6 @@ fun PetalExtensionPopupScreen(
                                         prompt: GeckoSession.PromptDelegate.TextPrompt
                                     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
                                         val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
-                                        // Detect password-type hints from the prompt message.
                                         val lowerMsg = (prompt.message ?: "").lowercase()
                                         val isPass = lowerMsg.contains("password") ||
                                             lowerMsg.contains("pin") ||
