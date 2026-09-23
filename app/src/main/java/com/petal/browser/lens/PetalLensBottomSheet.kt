@@ -1,5 +1,6 @@
 package com.petal.browser.lens
 
+import com.petal.browser.view.NinjaToast;
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.petal.browser.haptics.PetalHapticEngine
 import com.petal.browser.media.MediaFilterType
@@ -80,25 +82,29 @@ fun PetalLensBottomSheet(
         refreshGallery()
     }
 
+    fun openImageWithSelectedScanner(uri: Uri) {
+        if (PetalLensManager.snapProvider(context) == PetalLensManager.SnapProvider.PETAL_SCANNER) {
+            PetalImageScannerBridge.show(context as androidx.activity.ComponentActivity, uri.toString())
+        } else {
+            PetalLensManager.launchLensForImageUri(context, uri)
+        }
+        onDismissRequest()
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                PetalLensManager.launchLensForImageUri(context, uri)
-            } catch (e: Exception) {
-                PetalLensManager.launchGoogleLensApp(context)
-            }
-            onDismissRequest()
+            runCatching { openImageWithSelectedScanner(uri) }
+                .onFailure { PetalLensManager.launchGoogleLensApp(context) }
         }
     }
     val galleryChooserLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try { PetalLensManager.launchLensForImageUri(context, uri) }
-            catch (_: Exception) { PetalLensManager.launchGoogleLensApp(context) }
-            onDismissRequest()
+            runCatching { openImageWithSelectedScanner(uri) }
+                .onFailure { PetalLensManager.launchGoogleLensApp(context) }
         }
     }
 
@@ -121,7 +127,7 @@ fun PetalLensBottomSheet(
             try {
                 cameraLauncher.launch(uri)
             } catch (e: Exception) {
-                Toast.makeText(context, "Unable to launch camera app", Toast.LENGTH_SHORT).show()
+                NinjaToast.show(context, "Unable to launch camera app", Toast.LENGTH_SHORT)
                 PetalLensManager.launchGoogleLensApp(context)
                 onDismissRequest()
             }
@@ -138,7 +144,7 @@ fun PetalLensBottomSheet(
         if (isGranted) {
             refreshGallery()
         } else {
-            Toast.makeText(context, "Media permission is required to browse gallery photos", Toast.LENGTH_SHORT).show()
+            NinjaToast.show(context, "Media permission is required to browse gallery photos", Toast.LENGTH_SHORT)
         }
     }
 
@@ -148,7 +154,7 @@ fun PetalLensBottomSheet(
         if (isGranted) {
             launchCameraInternal()
         } else {
-            Toast.makeText(context, "Camera permission is required to snap a photo", Toast.LENGTH_SHORT).show()
+            NinjaToast.show(context, "Camera permission is required to snap a photo", Toast.LENGTH_SHORT)
         }
     }
 
@@ -161,8 +167,9 @@ fun PetalLensBottomSheet(
             showPetalScanner = true
             return
         }
-        val hasCameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        if (hasCameraPermission) launchCameraInternal() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        // Google Lens owns its camera experience; launch it directly instead of
+        // opening Petal's system camera and taking an intermediate photo.
+        PetalLensManager.launchGoogleLensApp(context)
     }
 
     // Auto-trigger snap camera feature if requested from widget or shortcut:
@@ -192,7 +199,7 @@ fun PetalLensBottomSheet(
                         PetalLensManager.setSnapProvider(context, PetalLensManager.SnapProvider.PETAL_SCANNER)
                         showSnapProviderChooser = false
                         beginSnap()
-                    }) { Text("Petal Scanner") }
+                    }) { Text("Petal QR Scanner") }
                     TextButton(onClick = {
                         showSnapProviderChooser = false
                         beginSnap()
@@ -203,17 +210,22 @@ fun PetalLensBottomSheet(
     }
 
     if (showPetalScanner) {
-        Dialog(onDismissRequest = { showPetalScanner = false }) {
+        Dialog(
+            onDismissRequest = { showPetalScanner = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
             PetalQrScannerScreen(
                 onResult = { value ->
                     showPetalScanner = false
                     (context as? com.petal.browser.activity.BrowserActivity)?.restoreBrowserInputFocus()
                     if (value.startsWith("http://") || value.startsWith("https://")) {
                         com.petal.browser.unit.BrowserUnit.intentURL(context, Uri.parse(value))
+                        onDismissRequest()
                     } else {
                         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Scanned barcode", value))
-                        Toast.makeText(context, "Barcode copied", Toast.LENGTH_SHORT).show()
+                        NinjaToast.show(context, "Barcode copied", Toast.LENGTH_SHORT)
+                        onDismissRequest()
                     }
                 },
                 onDismiss = {
@@ -262,7 +274,7 @@ fun PetalLensBottomSheet(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.CenterFocusWeak,
-                                contentDescription = "Google Lens",
+                                contentDescription = "Petal QR Scanner",
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -270,7 +282,7 @@ fun PetalLensBottomSheet(
                     }
                     Column {
                         Text(
-                            text = "Google Lens Search",
+                            text = "Petal QR Scanner",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -548,12 +560,8 @@ fun PetalLensBottomSheet(
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable {
                                     PetalHapticEngine.getInstance(context).playClick(context)
-                                    try {
-                                        PetalLensManager.launchLensForImageUri(context, item.uri)
-                                    } catch (e: Exception) {
-                                        PetalLensManager.launchGoogleLensApp(context)
-                                    }
-                                    onDismissRequest()
+                                    runCatching { openImageWithSelectedScanner(item.uri) }
+                                        .onFailure { PetalLensManager.launchGoogleLensApp(context) }
                                 }
                         ) {
                             AsyncImage(
@@ -564,45 +572,6 @@ fun PetalLensBottomSheet(
                             )
                         }
                     }
-                }
-            }
-
-            // Standalone Google Lens App Launcher Row
-            Surface(
-                onClick = {
-                    PetalLensManager.launchGoogleLensApp(context)
-                    onDismissRequest()
-                },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.CenterFocusWeak,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Launch Standalone Lens App",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Text(
-                        text = "Open",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
 
