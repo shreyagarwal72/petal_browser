@@ -1,5 +1,6 @@
 package com.petal.browser.unit;
 
+import com.petal.browser.view.NinjaToast;
 import static android.content.ContentValues.TAG;
 
 import android.Manifest;
@@ -220,7 +221,7 @@ public class BrowserUnit {
             } catch (Exception e) {
                 // Sicherer Umgang mit Fehlermeldungen ohne StringIndexOutOfBoundsException
                 String errorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
-                Toast.makeText(context, context.getString(R.string.app_error) + ": " + errorMessage, Toast.LENGTH_LONG).show();
+                NinjaToast.show(context, context.getString(R.string.app_error) + ": " + errorMessage, Toast.LENGTH_LONG);
                 Log.e(TAG, "Petal: Error Downloading File", e);
             }
         } else {
@@ -300,10 +301,19 @@ public class BrowserUnit {
         }
         // ONLY clear cookies and logins if the user explicitly commanded manual cookie deletion
         if (clearCookie) {
-            CookieManager cookieManager = CookieManager.getInstance();
-            cookieManager.flush();
-            cookieManager.removeAllCookies(value -> {
-            });
+            try {
+                if (com.petal.browser.engine.gecko.PetalGeckoRuntime.isGeckoAvailable(context)) {
+                    com.petal.browser.engine.gecko.PetalGeckoRuntime.clearData(
+                        context,
+                        org.mozilla.geckoview.StorageController.ClearFlags.COOKIES
+                    );
+                }
+            } catch (Exception ignored) {}
+            try {
+                CookieManager cookieManager = CookieManager.getInstance();
+                cookieManager.flush();
+                cookieManager.removeAllCookies(value -> {});
+            } catch (Exception ignored) {}
         }
         if (clearDB) {
             context.deleteDatabase("Ninja4.db");
@@ -311,7 +321,14 @@ public class BrowserUnit {
             sp.edit().putInt("restart_changed", 1).apply();
         }
         if (clearIndexedDB) {
-            // Use WebStorage instead of raw app_webview file deletion while tabs are open
+            try {
+                if (com.petal.browser.engine.gecko.PetalGeckoRuntime.isGeckoAvailable(context)) {
+                    com.petal.browser.engine.gecko.PetalGeckoRuntime.clearData(
+                        context,
+                        org.mozilla.geckoview.StorageController.ClearFlags.DOM_STORAGES
+                    );
+                }
+            } catch (Exception ignored) {}
             try {
                 WebStorage.getInstance().deleteAllData();
             } catch (Exception ignored) {}
