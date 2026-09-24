@@ -26,7 +26,6 @@ import androidx.preference.PreferenceManager
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.petal.browser.haptics.PetalHapticEngine
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.ui.theme.defaultPaletteId
 import com.petal.browser.ui.theme.isDynamicColorSupported
@@ -60,13 +59,13 @@ fun PetalConfirmSheetContent(
             modifier = Modifier
                 .width(36.dp)
                 .height(4.dp)
-                .clip(PetalBrowserShapes.Pill)
+                .clip(RoundedCornerShape(50))
                 .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
         )
 
         // Header Icon Badge
         Surface(
-            shape = PetalBrowserShapes.Small,
+            shape = RoundedCornerShape(20.dp),
             color = if (isDestructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(56.dp)
         ) {
@@ -108,7 +107,7 @@ fun PetalConfirmSheetContent(
                     PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.TICK, 0.4f)
                     onCancel()
                 },
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
@@ -124,7 +123,7 @@ fun PetalConfirmSheetContent(
                     )
                     onConfirm()
                 },
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     contentColor = if (isDestructive) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
@@ -175,7 +174,7 @@ object PetalConfirmSheetBridge {
                     dynamicColor = useDynamic
                 ) {
                     Surface(
-                        shape = PetalBrowserShapes.Sheet,
+                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -249,6 +248,34 @@ object PetalConfirmSheetBridge {
             confirmText = "Quit",
             cancelText = "Stay",
             isDestructive = false,
+            onConfirm = onConfirm
+        )
+    }
+
+    @JvmStatic
+    fun showRestartConfirmation(activity: ComponentActivity, onConfirm: Runnable) {
+        showConfirmSheet(
+            activity = activity,
+            icon = Icons.Rounded.RestartAlt,
+            title = "Restart Petal Browser?",
+            message = "A restart is required to apply the updated configuration and engine settings.",
+            confirmText = "Restart Now",
+            cancelText = "Later",
+            isDestructive = false,
+            onConfirm = onConfirm
+        )
+    }
+
+    @JvmStatic
+    fun showClearDatabaseConfirmation(activity: ComponentActivity, title: String, message: String, onConfirm: Runnable) {
+        showConfirmSheet(
+            activity = activity,
+            icon = Icons.Rounded.DeleteForever,
+            title = title,
+            message = message,
+            confirmText = "Clear All",
+            cancelText = "Cancel",
+            isDestructive = true,
             onConfirm = onConfirm
         )
     }

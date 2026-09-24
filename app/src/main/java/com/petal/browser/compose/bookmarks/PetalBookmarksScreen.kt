@@ -8,7 +8,6 @@
 
 package com.petal.browser.compose.bookmarks
 
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import android.content.Context
 import android.net.Uri
 import androidx.activity.ComponentActivity
@@ -50,8 +49,8 @@ import com.petal.browser.unit.RecordUnit
 import com.petal.browser.ui.components.ExpressiveHeader
 import com.petal.browser.ui.components.HeaderActionIcon
 import com.petal.browser.ui.components.M3ExpressiveVariableBackground
-import com.petal.browser.ui.components.bouncyClickable
-import com.petal.browser.ui.components.entrance
+import com.petal.browser.ui.components.PetalExpressiveAlertDialog
+import com.petal.browser.ui.components.PetalExpressiveDialog
 import com.petal.browser.ui.theme.ExperimentalMaterial3ExpressiveApi
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.compose.home.getFaviconUrl
@@ -257,7 +256,7 @@ fun PetalBookmarksScreen(
                         }
                     },
                     singleLine = true,
-                    shape = PetalBrowserShapes.Card,
+                    shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -368,66 +367,93 @@ fun PetalBookmarksScreen(
             }
         }
 
-        // Dialog: Clear All Bookmarks
+        // Dialog: Clear All Bookmarks (Material 3 Expressive)
         if (showClearConfirm) {
-            AlertDialog(
+            PetalExpressiveAlertDialog(
                 onDismissRequest = { showClearConfirm = false },
-                icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                title = { Text("Clear All Bookmarks?") },
-                text = { Text("This will permanently remove all bookmarks from your library. This action cannot be undone.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showClearConfirm = false
-                            try {
-                                val action = RecordAction(context)
-                                action.open(true)
-                                action.clearTable(RecordUnit.TABLE_BOOKMARK)
-                                action.close()
-                            } catch (_: Exception) {}
-                            reloadBookmarks()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Clear All")
-                    }
+                icon = Icons.Rounded.DeleteSweep,
+                title = "Clear All Bookmarks?",
+                message = "This will permanently remove all bookmarks from your library. This action cannot be undone.",
+                confirmText = "Clear All",
+                dismissText = "Cancel",
+                destructive = true,
+                onConfirm = {
+                    showClearConfirm = false
+                    try {
+                        val action = RecordAction(context)
+                        action.open(true)
+                        action.clearTable(RecordUnit.TABLE_BOOKMARK)
+                        action.close()
+                    } catch (_: Exception) {}
+                    reloadBookmarks()
                 },
-                dismissButton = {
-                    TextButton(onClick = { showClearConfirm = false }) {
-                        Text("Cancel")
-                    }
-                }
+                onDismiss = { showClearConfirm = false }
             )
         }
 
-        // Dialog: Add Custom Bookmark
+        // Dialog: Add Custom Bookmark (Material 3 Expressive)
         if (showAddDialog) {
             var newTitle by remember { mutableStateOf("") }
             var newUrl by remember { mutableStateOf("") }
 
-            AlertDialog(
-                onDismissRequest = { showAddDialog = false },
-                title = { Text("Add Bookmark") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = newTitle,
-                            onValueChange = { newTitle = it },
-                            label = { Text("Title") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = newUrl,
-                            onValueChange = { newUrl = it },
-                            label = { Text("URL") },
-                            placeholder = { Text("https://example.com") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+            PetalExpressiveDialog(onDismissRequest = { showAddDialog = false }) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Rounded.BookmarkAdd,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
-                },
-                confirmButton = {
+                }
+
+                Text(
+                    text = "Add Bookmark",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = newTitle,
+                        onValueChange = { newTitle = it },
+                        label = { Text("Title") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newUrl,
+                        onValueChange = { newUrl = it },
+                        label = { Text("URL") },
+                        placeholder = { Text("https://example.com") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { showAddDialog = false },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
                             showAddDialog = false
@@ -442,17 +468,14 @@ fun PetalBookmarksScreen(
                                 } catch (_: Exception) {}
                                 reloadBookmarks()
                             }
-                        }
+                        },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.heightIn(min = 48.dp)
                     ) {
                         Text("Save")
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
-                        Text("Cancel")
-                    }
                 }
-            )
+            }
         }
     }
     }
@@ -474,7 +497,7 @@ private fun BookmarkCardItem(
     var isFaviconError by remember(record.url) { mutableStateOf(false) }
 
     Card(
-        shape = PetalBrowserShapes.Card,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -497,7 +520,7 @@ private fun BookmarkCardItem(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(PetalBrowserShapes.ExtraSmall)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.primary)
             ) {
                 if (!faviconUrl.isNullOrEmpty() && !isFaviconError) {
@@ -507,7 +530,7 @@ private fun BookmarkCardItem(
                         onError = { isFaviconError = true },
                         modifier = Modifier
                             .size(24.dp)
-                            .clip(PetalBrowserShapes.ExtraSmall)
+                            .clip(RoundedCornerShape(6.dp))
                     )
                 } else {
                     Icon(
@@ -538,7 +561,7 @@ private fun BookmarkCardItem(
                 if (record.isReadingList) {
                     Spacer(Modifier.height(4.dp))
                     Surface(
-                        shape = PetalBrowserShapes.Pill,
+                        shape = RoundedCornerShape(50),
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     ) {
