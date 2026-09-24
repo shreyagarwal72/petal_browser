@@ -428,20 +428,13 @@ object PetalSettingsSearchIndex {
             keywords = listOf("clear data", "clear cache", "delete history", "clear cookies", "wipe data", "storage")
         ),
 
-        // ==================== UPDATER & DIAGNOSTICS ====================
+        // ==================== SUPPORTIVE ADS ====================
         SettingsSearchItem(
-            id = "updater_check_now",
-            title = "Check for Updates Now",
-            subtitle = "Query GitHub release API for new Petal Browser versions and changelogs",
-            category = SettingsCategory.UPDATER,
-            keywords = listOf("check for updates", "update app", "github release", "latest version", "apk update")
-        ),
-        SettingsSearchItem(
-            id = "updater_crash_reporting",
-            title = "Crash Reporting & Diagnostics",
-            subtitle = "View crash logs, diagnostics stack traces, and manage error reporting",
-            category = SettingsCategory.UPDATER,
-            keywords = listOf("crash logs", "diagnostics", "stack trace", "error logs", "bug report", "reporting")
+            id = "ads_supportive",
+            title = "Supportive Ads",
+            subtitle = "Enable or disable optional non-intrusive home screen banners",
+            category = SettingsCategory.ADS,
+            keywords = listOf("ads", "supportive ads", "monetization", "support", "banner", "admob")
         ),
 
         // ==================== ABOUT & DEVELOPER ====================
@@ -473,7 +466,7 @@ object PetalSettingsSearchIndex {
         SettingsCategory.DOWNLOAD,
         SettingsCategory.MISCELLANEOUS,
         SettingsCategory.DATA_STORAGE,
-        SettingsCategory.UPDATER,
+        SettingsCategory.ADS,
         SettingsCategory.ABOUT
     )
 

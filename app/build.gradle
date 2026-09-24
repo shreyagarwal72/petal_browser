@@ -148,6 +148,9 @@ dependencies {
     implementation 'androidx.glance:glance-appwidget:1.1.1'
     implementation 'androidx.glance:glance-material3:1.1.1'
 
+    // PDFBox-Android — real PDF text editing and geometry extraction
+    implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+
     // AndroidX Activity, Lifecycle, and SavedState Explicit KTX Dependencies
     implementation 'androidx.core:core-splashscreen:1.0.1'
     implementation 'androidx.activity:activity-ktx:1.9.3'
