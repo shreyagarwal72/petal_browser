@@ -236,4 +236,10 @@ dependencies {
     kapt 'com.google.dagger:hilt-compiler:2.58'
     kapt 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
+
+    // Google Mobile Ads (AdMob) — Play Store variant only (Supportive Ads)
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+
+    // Google Play In-App Updates (Play Store variant only)
+    implementation 'com.google.android.play:app-update-ktx:2.1.0'
 }
