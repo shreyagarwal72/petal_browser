@@ -20,8 +20,8 @@ android {
         applicationId "com.petal.browser"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 370
-        versionName "3.7"
+        versionCode 380
+        versionName "3.8"
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
         resConfigs "ar", "b+hi+Latn", "b+sr+Latn", "cs", "de", "el", "es", "et", "fa", "fr", "he", "hi", "hu", "id", "it", "ja", "nl", "pl", "pt", "ro", "ru", "sr", "sv", "tr", "uk", "vi", "zh", "zh-rTW"
@@ -102,7 +102,7 @@ android {
     return void
 }
 
-// Kotlin 2.4 removed the legacy android { kotlinOptions {} } DSL.
+// Kotlin 2.4 removed the legacy android { kotlinOptions {} } DSL (hard compile error).
 // Use the compilerOptions DSL instead.
 kotlin {
     compilerOptions {
@@ -120,13 +120,13 @@ tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask).con
 
 configurations.all {
     resolutionStrategy {
-        force 'com.google.android.gms:play-services-fido:21.1.0'
         force 'org.jetbrains.kotlin:kotlin-stdlib:2.4.0'
         force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.4.0'
         force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.4.0'
         force 'org.jetbrains.kotlin:kotlin-stdlib-common:2.4.0'
         force 'org.jetbrains.kotlin:kotlin-reflect:2.4.0'
-        // Match Kotlin metadata emitted by Mozilla Components 155.
+        // Dagger/Hilt (>= 2.57) no longer shades kotlin-metadata-jvm. Its bundled reader tops out at
+        // Kotlin metadata 2.3.0, but Mozilla Components 155 ships 2.4.0 metadata, so force a matching reader.
         force 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0'
     }
 }
@@ -184,8 +184,6 @@ dependencies {
     // Google Sign-In via Credential Manager (real OAuth, consent-screen based —
     // replaces the old WebView-cookie account sync)
     implementation 'androidx.credentials:credentials:1.5.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
 
     // Legacy Google Sign-In (play-services-auth). Deprecated by Google in favor of
@@ -194,14 +192,11 @@ dependencies {
     // failed" - androidx.credentials.exceptions.GetCredentialCancellationException,
     // see https://github.com/android/identity-samples/issues/90) that some devices hit
     // even with fully correct OAuth configuration.
-    implementation 'com.google.android.gms:play-services-auth:21.3.0'
 
     // AndroidX Biometric for hardware biometric & device credential lock
     implementation 'androidx.biometric:biometric:1.2.0-alpha05'
 
     // Google ML Kit On-Device Recognition APIs
-    implementation 'com.google.mlkit:text-recognition:16.0.1'
-    implementation 'com.google.mlkit:barcode-scanning:17.3.0'
 
     // Hidden API bypass for non-SDK interface access (e.g. GeckoThread on Android 15/16)
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
@@ -241,10 +236,4 @@ dependencies {
     kapt 'com.google.dagger:hilt-compiler:2.58'
     kapt 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
-
-    // Google Mobile Ads (AdMob) — Play Store variant only (Supportive Ads)
-    implementation 'com.google.android.gms:play-services-ads:23.6.0'
-
-    // Google Play In-App Updates (Play Store variant only)
-    implementation 'com.google.android.play:app-update-ktx:2.1.0'
 }
