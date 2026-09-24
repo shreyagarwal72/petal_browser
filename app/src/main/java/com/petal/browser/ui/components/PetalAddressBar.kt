@@ -39,7 +39,7 @@ import com.petal.browser.compose.ai.PetalAiResearchEngine
 import com.petal.browser.database.Record
 import com.petal.browser.database.RecordAction
 import com.petal.browser.haptics.PetalHapticEngine
-import com.petal.browser.view.NinjaToast
+import com.petal.browser.view.PetalToast
 
 /**
  * Material 3 Expressive Collapsed/Scrolled Address Bar.
@@ -306,11 +306,11 @@ fun PetalAddressBar(
                                     if (isBookmarked) {
                                         action.deleteURL(url, com.petal.browser.unit.RecordUnit.TABLE_BOOKMARK)
                                         isBookmarked = false
-                                        NinjaToast.show(context, "Bookmark removed")
+                                        PetalToast.show(context, "Bookmark removed")
                                     } else {
                                         action.addBookmark(Record(if (title.isNotBlank()) title else url, url, 0L, 0))
                                         isBookmarked = true
-                                        NinjaToast.show(context, "Saved to Bookmarks")
+                                        PetalToast.show(context, "Saved to Bookmarks")
                                     }
                                     action.close()
                                 } catch (e: Exception) {
@@ -420,7 +420,7 @@ fun PetalAddressBar(
                             val cleanUrl = sanitizeTrackingParameters(url)
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("Clean URL", cleanUrl))
-                            NinjaToast.show(context, "Clean URL copied to clipboard")
+                            PetalToast.show(context, "Clean URL copied to clipboard")
                         }
                 ) {
                     Row(
@@ -491,12 +491,12 @@ fun PetalAddressBar(
                                 if (isBookmarked) {
                                     action.deleteURL(url, com.petal.browser.unit.RecordUnit.TABLE_BOOKMARK)
                                     isBookmarked = false
-                                    NinjaToast.show(context, "Bookmark removed")
+                                    PetalToast.show(context, "Bookmark removed")
                                 } else {
                                     val r = Record(if (title.isNotBlank()) title else url, url, 0L, 0)
                                     action.addBookmark(r)
                                     isBookmarked = true
-                                    NinjaToast.show(context, "Saved to Bookmarks")
+                                    PetalToast.show(context, "Saved to Bookmarks")
                                 }
                                 action.close()
                             } catch (e: Exception) {

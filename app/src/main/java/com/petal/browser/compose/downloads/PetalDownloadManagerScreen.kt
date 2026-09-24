@@ -1197,7 +1197,7 @@ private fun renameDownloadedFile(context: Context, item: DownloadItem, newName: 
                 val newFile = java.io.File(oldFile.parent, newName)
                 if (oldFile.renameTo(newFile)) {
                     android.media.MediaScannerConnection.scanFile(context, arrayOf(newFile.absolutePath), null, null)
-                    com.petal.browser.view.NinjaToast.show(context, "Renamed to $newName")
+                    com.petal.browser.view.PetalToast.show(context, "Renamed to $newName")
                 }
             }
         }
@@ -1211,7 +1211,7 @@ private fun copyDownloadLink(context: Context, url: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         val clip = android.content.ClipData.newPlainText("Download Link", url)
         clipboard.setPrimaryClip(clip)
-        com.petal.browser.view.NinjaToast.show(context, "Link copied to clipboard")
+        com.petal.browser.view.PetalToast.show(context, "Link copied to clipboard")
     } catch (e: Exception) {
         e.printStackTrace()
     }
@@ -1338,7 +1338,7 @@ private fun deleteMultipleFiles(context: Context, items: List<DownloadItem>) {
     if (items.isEmpty()) return
     try {
         PetalFetchDownloadBridge.deleteDownloads(context, items)
-        com.petal.browser.view.NinjaToast.show(context, "Deleted ${items.size} items")
+        com.petal.browser.view.PetalToast.show(context, "Deleted ${items.size} items")
     } catch (e: Exception) {
         e.printStackTrace()
     }
