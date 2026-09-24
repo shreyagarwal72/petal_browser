@@ -163,7 +163,6 @@ import com.petal.browser.view.GridAdapter;
 import com.petal.browser.view.GridItem;
 import com.petal.browser.view.MenuItem;
 import com.petal.browser.view.PetalToast;
-import com.petal.browser.view.NinjaWebView;
 import com.petal.browser.view.AdapterRecord;
 import com.petal.browser.view.SwipeTouchListener;
 import dagger.hilt.android.AndroidEntryPoint;
@@ -180,17 +179,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     // Views
     public TextInputEditText search_input;
     public TextView appBar_title;
-    public EditText searchOnSiteInput;
-    @SuppressLint("StaticFieldLeak")
-    public static NinjaWebView ninjaWebView;
-
-    /**
-     * Kotlin-friendly accessor (exposed as the `currentNinjaWebView` property) for the
-     * currently active NinjaWebView instance.
-     */
-    public NinjaWebView getCurrentNinjaWebView() {
-        return ninjaWebView;
-    }
+    public View findInPageCompose;
+    public boolean isFindInPageShowing = false;
+    public String findInPageQuery = "";
 
     public View customView;
     public WebChromeClient.CustomViewCallback customViewCallback;
@@ -200,7 +191,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public FloatingActionButton fab_menu;
     public BadgeDrawable badgeDrawable;
     public AdapterSearch adapterSearch;
-    public MaterialCardView searchOnSiteLayout;
 
     // Layouts
     public LinearProgressIndicator progressBar;
@@ -298,11 +288,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             return ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getMediaBridge();
         }
-        if (ninjaWebView != null) {
-            return ninjaWebView.getMediaBridge();
-        }
         return null;
     }
+
 
     private Runnable pendingWidgetAction = null;
     private final ServiceConnection mediaConnection = new ServiceConnection() {
@@ -383,16 +371,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         return context;
     }
 
-    public NinjaWebView getNinjaWebView() {
-        return ninjaWebView;
-    }
-
+    
     public boolean canNinjaGoBack() {
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             return ((com.petal.browser.view.PetalGeckoView) currentAlbumController).canGoBack();
         }
-        return ninjaWebView != null && ninjaWebView.canGoBack();
+        return false;
     }
+
 
     public void handleBackPress() {
         runOnUiThread(this::performBackNavigation);
@@ -624,6 +610,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             root.removeView(overlay);
                         }
                         com.petal.browser.extensions.PetalExtensionManager.dismissPopup();
+                        // Explicitly reactivate the current browser tab session
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            try {
+                                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).activate();
+                            } catch (Throwable ignored) {}
+                        }
                         // Post focus restoration to ensure window focus queue is idle
                         root.post(() -> restoreBrowserInputFocus());
                     };
@@ -635,12 +627,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                                 return kotlin.Unit.INSTANCE;
                             }
                         );
-                    popupView.addOnAttachStateChangeListener(new android.view.View.OnAttachStateChangeListener() {
-                        @Override public void onViewAttachedToWindow(android.view.View view) {}
-                        @Override public void onViewDetachedFromWindow(android.view.View view) {
-                            cleanupPopup.run();
-                        }
-                    });
                     popupView.setTag("ext_popup_overlay");
                     android.view.ViewGroup rootDecor = (android.view.ViewGroup) getWindow().getDecorView();
                     // Remove any stale popup overlay first
@@ -654,6 +640,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         android.view.ViewGroup.LayoutParams.MATCH_PARENT
                     );
                     rootDecor.addView(popupView, lp);
+                    popupView.requestFocus();
                 } catch (Exception e) {
                     android.util.Log.e("BrowserActivity", "Failed to show extension popup overlay", e);
                 }
@@ -755,9 +742,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 // predictive-back gesture so both websites and the Petal homepage receive it.
                 if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                     ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetGestureExclusionRects();
-                } else if (ninjaWebView != null) {
-                    ninjaWebView.resetGestureExclusionRects();
                 }
+
                 predictiveBackStartedOnOverlay = isOverlayScreenShowing && !isDecorOverlayShowing && hasNonTabTopContent();
                 if (predictiveBackStartedOnOverlay) {
                     predictiveBackSwipeEdge = backEvent.getSwipeEdge();
@@ -829,9 +815,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             getWindow().getDecorView().post(() -> {
                 if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                     ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetGestureExclusionRects();
-                } else if (ninjaWebView != null) {
-                    ninjaWebView.resetGestureExclusionRects();
                 }
+
             });
         }
         predictiveBackRoot = findViewById(R.id.main);
@@ -1050,9 +1035,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         applyAddressBarPosition();
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
-        } else if (ninjaWebView != null) {
-            ninjaWebView.onResume();
-            ninjaWebView.resumeTimers();
         }
         if (sp.getBoolean("sp_camera", false)) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -1065,7 +1047,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (sp.getBoolean("pdf_create", false)) {
             sp.edit().putBoolean("pdf_create", false).apply();
             String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) +"?";
-            View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : (ninjaWebView != null ? ninjaWebView : findViewById(android.R.id.content));
+            View anchor = currentAlbumController != null ? currentAlbumController.getAlbumView() : findViewById(android.R.id.content);
+
             Snackbar snackbar = HelperUnit.makePetalSnackbar(anchor, text, Snackbar.LENGTH_SHORT);
             HelperUnit.makeSnackbarRound(snackbar);
             snackbar.setAction(context.getString(R.string.app_ok), v -> showDownloads());
@@ -1131,6 +1114,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
+        try {
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.onTrimMemory(this, level);
+            com.petal.browser.unit.TabThumbnailCache.clear();
+        } catch (Throwable t) {
+            Log.d(TAG, "Error in onTrimMemory: " + t.getMessage());
+        }
         // Proactively suspend background GeckoView tabs under memory pressure so the OS
         // doesn't OOM-kill the content process mid-session. Levels RUNNING_LOW (10),
         // RUNNING_CRITICAL (15), and COMPLETE (80) are the most urgent signals.
@@ -1170,7 +1159,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
      * Posted so it never runs re-entrantly inside the Compose callback that triggered the
      * removal, and skipped if the same view was re-attached in the meantime (a re-attached
      * ComposeView would simply rebuild its composition on the next measure anyway).
-     * Retained tab surfaces (GeckoView/NinjaWebView) are not ComposeViews and are unaffected.
+     * Retained tab surfaces (PetalGeckoView) are not ComposeViews and are unaffected.
      */
     private void disposeRemovedComposeOverlay(View child) {
         if (!(child instanceof androidx.compose.ui.platform.ComposeView)) return;
@@ -1200,9 +1189,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             isOverlayScreenShowing = false;
             pendingOverlayBackAction = null;
         }
-        if (currentAlbumController instanceof NinjaWebView) {
-            ninjaWebView = (NinjaWebView) currentAlbumController;
-        }
+        
 
         View currentFocus = getCurrentFocus();
         boolean isKeyboardVisible = false;
@@ -1220,7 +1207,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 // gesture/inset transition, navigated correctly every time. isAcceptingText()
                 // reflects the real IME service state rather than a cached insets snapshot, and
                 // (unlike checking for a focused EditText) it still recognizes a focused HTML
-                // input inside NinjaWebView/PetalGeckoView, so typing-then-back still just closes
+                // input inside PetalGeckoView, so typing-then-back still just closes
                 // the keyboard there as before.
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 boolean imeActuallyServing = imm != null && imm.isAcceptingText();
@@ -1253,10 +1240,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             hideOverview();
             return;
         }
-        if (searchOnSiteLayout != null && searchOnSiteLayout.getVisibility() == VISIBLE) {
-            searchOnSiteInput.setText("");
-            searchOnSiteLayout.setVisibility(GONE);
-            appBar.setVisibility(VISIBLE);
+        if (isFindInPageShowing) {
+            closeFindInPage();
             return;
         }
         if (isOverlayScreenShowing) {
@@ -1422,7 +1407,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void updateBackCallbackState() {
         if (browserBackCallback == null) return;
         boolean hasOverlay = isOverlayScreenShowing || hasNonTabTopContent();
-        boolean hasDialog = (dialogOverview != null && dialogOverview.isShowing()) || (searchOnSiteLayout != null && searchOnSiteLayout.getVisibility() == VISIBLE) || (customView != null) || (fullscreenHolder != null) || (videoView != null);
+        boolean hasDialog = (dialogOverview != null && dialogOverview.isShowing()) || isFindInPageShowing || (customView != null) || (fullscreenHolder != null) || (videoView != null);
         boolean hasWebBack = (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView && ((com.petal.browser.view.PetalGeckoView) currentAlbumController).hasBackHistory()) || (ninjaWebView != null && ninjaWebView.canGoBack());
         String curUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
         boolean isWebPageNotHome = !isPetalHomeSurfaceShowing && !isHomePage(curUrl) && curUrl != null && !curUrl.isEmpty() && !curUrl.equalsIgnoreCase("about:blank");
@@ -1531,8 +1516,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_MENU:
-                String title = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : "");
-                String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
                 showOverflow(null, null, 0, title, url, null, null, 0);
                 return true;
             case KeyEvent.KEYCODE_F7:
@@ -1613,7 +1598,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 if (refreshBarCompose != null) refreshBarCompose.setVisibility(GONE);
                 if (mainProgressBar != null) mainProgressBar.setVisibility(GONE);
                 if (downloadBannerCompose != null) downloadBannerCompose.setVisibility(GONE);
-                if (searchOnSiteLayout != null) searchOnSiteLayout.setVisibility(GONE);
+                closeFindInPage();
                 if (fabShowAppBar != null) fabShowAppBar.setVisibility(GONE);
                 if (appBar != null) appBar.setVisibility(GONE);
                 if (fabMenu != null) fabMenu.setVisibility(GONE);
@@ -1675,7 +1660,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
     }
 
-    public void onTabUrlStarted(NinjaWebView webView, String url) {
+    public void onTabUrlStarted(com.petal.browser.browser.AlbumController webView, String url) {
         runOnUiThread(() -> {
             if (webView != ninjaWebView) return;
 
@@ -1705,8 +1690,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     // ─────────────────────────────────────────────────────────────────────────
     // Retained tab surfaces
     //
-    // Every tab's browser surface (PetalGeckoView / NinjaWebView album view) is added to
+    // Every tab's browser surface (PetalGeckoView album view) is added to
     // contentFrame exactly once, the first time that tab is shown, and then stays attached
+
     // for the life of the tab. Switching tabs toggles View.VISIBLE / View.GONE and
     // suspends/resumes the outgoing/incoming GeckoSession via setActive(false/true) (done
     // by AlbumController.deactivate()/activate()). The view is never detached from the
@@ -1724,10 +1710,10 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     /** True if {@code v} is a browser surface that must be hidden, never detached, on a tab switch. */
     private boolean isTabSurface(View v) {
         return v != null
-                && (v instanceof NinjaWebView
-                || v instanceof com.petal.browser.view.PetalGeckoView
+                && (v instanceof com.petal.browser.view.PetalGeckoView
                 || retainedTabSurfaces.contains(v));
     }
+
 
     /** The topmost child of contentFrame that is not View.GONE, or null if nothing is visible. */
     private View getTopContentChild() {
@@ -1814,7 +1800,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     /**
-     * Mounts an album's view (GeckoView/NinjaWebView container) in {@code targetFrame} the
+     * Mounts an album's view (PetalGeckoView container) in {@code targetFrame} the
      * first time the tab is shown, defending against the GeckoView "attach before WindowInsets are dispatched" NPE
      * (see the caller for the full explanation) that otherwise leaves the frame with zero
      * children — i.e. a blank web page or blank home surface.
@@ -2026,18 +2012,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // must not cycle its session inactive->active: that pauses and resumes compositing
         // for no reason and is itself a source of visible flicker.
         if (currentAlbumController != null && currentAlbumController != controller) {
-            if (currentAlbumController instanceof NinjaWebView) {
-                ((NinjaWebView) currentAlbumController).updatePreviewCache();
-            }
+            
             currentAlbumController.deactivate();
         }
         currentAlbumController = controller;
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             com.petal.browser.engine.gecko.PetalEngineStore.selectTab(this, ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getTabId());
         }
-        if (currentAlbumController instanceof NinjaWebView) {
-            ninjaWebView = (NinjaWebView) currentAlbumController;
-        }
+        
         currentAlbumController.activate();
         // Always restore the host container before mounting a new surface. Predictive-back,
         // pull-to-refresh and other transitions may temporarily transform this container.
@@ -2099,7 +2081,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetToHome();
             } else if (ninjaWebView != null) {
                 ninjaWebView.stopLoading();
-                ninjaWebView.loadUrl("about:blank");
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
             }
             View composeView = PetalComposeBridge.createComposeHomeView(this, BrowserContainer.size(), new PetalHomeActionHandler() {
                 @Override
@@ -2229,8 +2211,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                 @Override
                 public void onOpenSettings() {
-                    String title = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : "");
-                    String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                    String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                    String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
                     showOverflow(null, null, 0, title, url, null, null, 0);
                 }
 
@@ -2291,7 +2273,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             // Swap tab surfaces by visibility, never by detaching: the outgoing tab's surface
             // goes View.GONE (its session was already setActive(false)), the incoming tab's
             // surface goes View.VISIBLE. This is the same code path for PetalGeckoView and
-            // NinjaWebView tabs.
+            // tabs.
             hideTabSurfacesExcept(av);
             if (av.getParent() == contentFrame) {
                 // Warm path: this tab's surface is already mounted. No removeView/addView, no
@@ -2399,41 +2381,16 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                 if ((currentUrl == null || currentUrl.isEmpty() || "about:blank".equalsIgnoreCase(currentUrl)) &&
                     (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl) && !"about:blank".equalsIgnoreCase(targetUrl))) {
-                    ninjaWebView.loadUrl(targetUrl);
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(targetUrl);
                 } else if (overrideUrl != null && !overrideUrl.isEmpty() && !overrideUrl.equalsIgnoreCase(currentUrl) && !isHomePage(overrideUrl) && !"about:blank".equalsIgnoreCase(overrideUrl)) {
-                    ninjaWebView.loadUrl(overrideUrl);
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(overrideUrl);
                 } else if (currentUrl != null && !currentUrl.isEmpty() && !isHomePage(currentUrl)) {
                     ninjaWebView.onResume();
                     ninjaWebView.resumeTimers();
                 }
 
                 ninjaWebView.updatePreviewCache();
-                ninjaWebView.setOnScrollChangeListener(new NinjaWebView.OnScrollChangeListener() {
-                    @Override
-                    public void onScrollDown() {
-                        boolean isFloating = sp.getBoolean("sp_floating_tab_bar", true);
-                        if (!isFloating) return;
-                        View bottomNavContainer = findViewById(R.id.bottom_nav_container);
-                        if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
-                            springTranslateY(bottomNavContainer, bottomNavContainer.getHeight(), androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
-                        }
-                    }
-
-                    @Override
-                    public void onScrollUp() {
-                        View bottomNavContainer = findViewById(R.id.bottom_nav_container);
-                        if (bottomNavContainer != null && bottomNavContainer.getVisibility() == VISIBLE) {
-                            springTranslateY(bottomNavContainer, 0f, androidx.dynamicanimation.animation.SpringForce.STIFFNESS_MEDIUM, androidx.dynamicanimation.animation.SpringForce.DAMPING_RATIO_LOW_BOUNCY);
-                        }
-                    }
-
-                    @Override
-                    public void onScrollPositionChanged(int scrollY, int contentHeight) {
-                        if (fastScrubberBridge != null) {
-                            fastScrubberBridge.onScrollUpdate(scrollY, contentHeight);
-                        }
-                    }
-                });
+                
             }
         }
         updateOmniBox();
@@ -2539,8 +2496,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         public void onMenuClick() {
                             com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
                             View navView = findViewById(R.id.bottom_nav_compose);
-                            String title = currentAlbumController != null ? currentAlbumController.getTitle() : (ninjaWebView != null ? ninjaWebView.getTitle() : "");
-                            String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+                            String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                            String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
                             showOverflow(null, navView, 0, title, url, null, null, 0);
                         }
 
@@ -2893,8 +2850,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             boolean isIncog = false;
             if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                 isIncog = ((com.petal.browser.view.PetalGeckoView) controller).isIncognito();
-            } else if (controller instanceof NinjaWebView) {
-                isIncog = ((NinjaWebView) controller).isIncognito();
+            
             } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
                 isIncog = ((com.petal.browser.browser.PlaceholderAlbumController) controller).isIncognito();
             }
@@ -2903,13 +2859,13 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
                 com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
             } else {
-                String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
+                String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
                 String homeUrl = sp.getString("favoriteURL", "about:blank");
                 if (currentUrl != null && !isHomePage(currentUrl) && !currentUrl.equals(homeUrl)) {
                     if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                         ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(homeUrl);
                     } else if (ninjaWebView != null) {
-                        ninjaWebView.loadUrl(homeUrl);
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(homeUrl);
                     }
                     showAlbum(currentAlbumController, homeUrl);
                 } else {
@@ -2929,9 +2885,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             closeTabConfirmation(() -> {
                 AlbumController predecessor;
                 if (controller == currentAlbumController) {
-                    if (controller instanceof NinjaWebView) {
-                        predecessor = ((NinjaWebView) controller).getPredecessor();
-                    } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                         predecessor = ((com.petal.browser.view.PetalGeckoView) controller).getPredecessor();
                     } else {
                         predecessor = null;
@@ -2973,10 +2927,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 } catch (Exception ignored) {}
 
                 BrowserContainer.remove(controller);
-                if (controller instanceof NinjaWebView) {
-                    ((NinjaWebView) controller).destroy();
-                    com.petal.browser.unit.TabThumbnailCache.remove(((NinjaWebView) controller).getTabId());
-                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                     ((com.petal.browser.view.PetalGeckoView) controller).destroy();
                 }
                 com.petal.browser.unit.TabThumbnailCache.remove(String.valueOf(controller.hashCode()));
@@ -3003,9 +2954,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
             // Retained surface: unmount it from contentFrame before the tab is destroyed.
             detachTabSurface(controller);
-            if (controller instanceof NinjaWebView) {
-                ((NinjaWebView) controller).destroy();
-            } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+            if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                 ((com.petal.browser.view.PetalGeckoView) controller).destroy();
             }
             boolean isClosingCurrent = (controller == currentAlbumController);
@@ -3041,9 +2990,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                 com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, ((com.petal.browser.view.PetalGeckoView) controller).getTabId());
             }
-            if (controller instanceof NinjaWebView) {
-                com.petal.browser.unit.TabThumbnailCache.remove(((NinjaWebView) controller).getTabId());
-            }
+            
             com.petal.browser.unit.TabThumbnailCache.remove(String.valueOf(controller.hashCode()));
             if (isClosingCurrent && BrowserContainer.size() > 0) {
                 AlbumController nextController = BrowserContainer.get(Math.max(0, BrowserContainer.size() - 1));
@@ -3052,17 +2999,14 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         currentAlbumController.deactivate();
                     }
                     currentAlbumController = nextController;
-                    if (currentAlbumController instanceof NinjaWebView) {
-                        ninjaWebView = (NinjaWebView) currentAlbumController;
-                    }
                     currentAlbumController.activate();
                 } else {
                     showAlbum(nextController);
                 }
             } else if (BrowserContainer.size() == 0) {
                 currentAlbumController = null;
-                ninjaWebView = null;
             }
+
             updatePersistentBottomNav();
             saveOpenedTabs();
             com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
@@ -3085,7 +3029,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         for (AlbumController ac : BrowserContainer.list()) {
             boolean tabIncog = (ac instanceof com.petal.browser.view.PetalGeckoView)
                     ? ((com.petal.browser.view.PetalGeckoView) ac).isIncognito()
-                    : (ac instanceof NinjaWebView && ((NinjaWebView) ac).isIncognito());
+                    : false; // all tabs are GeckoView
             if (tabIncog == isCurrentIncog) {
                 matchingTabs.add(ac);
             }
@@ -3397,7 +3341,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 try {
                     RecordAction action = new RecordAction(context);
                     action.open(true);
-                    String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
+                    String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
                     if (fab_overview != null) {
                         if (currentUrl != null && !currentUrl.isEmpty() && action.checkUrl(currentUrl, RecordUnit.TABLE_BOOKMARK)) {
                             fab_overview.setImageResource(R.drawable.icon_bookmark_added);
@@ -3406,6 +3350,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         }
                     }
                     action.close();
+
                 } catch (Exception e) {Log.i(TAG, "dialogCustomSearches:" + e);}
                 overViewTab = getString(R.string.album_title_bookmarks);
                 intPage.set(R.id.page_2);
@@ -3428,7 +3373,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(itemUrl);
                             showAlbum(currentAlbumController, itemUrl);
                         } else if (ninjaWebView != null) {
-                            ninjaWebView.loadUrl(itemUrl);
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(itemUrl);
                             showAlbum(currentAlbumController, itemUrl);
                         } else {
                             addAlbum(getString(R.string.app_name), itemUrl, true);
@@ -3470,7 +3415,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(itemUrl);
                         showAlbum(currentAlbumController, itemUrl);
                     } else if (ninjaWebView != null) {
-                        ninjaWebView.loadUrl(itemUrl);
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(itemUrl);
                         showAlbum(currentAlbumController, itemUrl);
                     } else {
                         addAlbum(getString(R.string.app_name), itemUrl, true);
@@ -3540,7 +3485,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         showDialogFilter();
                     } else if (item.getItemId() == R.id.menu_help) {
                         if (ninjaWebView != null) {
-                            ninjaWebView.loadUrl("about:blank");
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
                             showAlbum(currentAlbumController, "about:blank");
                         }
                     }
@@ -3794,7 +3739,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public boolean isCurrentTabHomeOrBlank() {
-        String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+        String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
         if (url == null || url.trim().isEmpty()) return true;
         String clean = url.trim().toLowerCase(java.util.Locale.ROOT);
         if (clean.equals("about:blank") || clean.equals("about:home") || clean.equals("petal://home") || clean.equals("petal://start") || clean.contains("petal_home.html")) {
@@ -4023,7 +3968,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     private boolean isAddressBarCollapsed = false;
 
     public void animateAddressBarCollapse(boolean collapse) {
-        String currentUrl = ninjaWebView != null ? ninjaWebView.getUrl() : "";
+        String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
         View fab_bubble = findViewById(R.id.fab_bubble);
         if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
         View progressBarCompose = findViewById(R.id.main_progress_bar_compose);
@@ -4210,7 +4155,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (currentAlbumController == null && ninjaWebView == null) return;
         updateAddressBar();
 
-        String url = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+        String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
         View progressBarCompose = findViewById(R.id.main_progress_bar_compose);
         View mediaSnifferBanner = findViewById(R.id.media_sniffer_compose);
         boolean isSearchOrInternal = com.petal.browser.media.sniffer.PetalMediaSniffer.isSearchEngineOrInternalUrl(url);
@@ -4251,53 +4196,113 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
     }
 
-    private void initSearchOnSite () {
-        searchOnSiteLayout = findViewById(R.id.searchOnSiteLayout);
-        searchOnSiteInput = findViewById(R.id.searchOnSite_input);
-        Button searchOnSite_buttonClose = findViewById(R.id.searchOnSite_buttonClose);
-        TextInputLayout searchOnSite_textField = findViewById(R.id.searchOnSite_textField);
-        if (searchOnSite_buttonClose != null) {
-            searchOnSite_buttonClose.setOnClickListener(v -> {
-                if (searchOnSiteInput != null && searchOnSiteInput.getText().length() > 0) {
-                    searchOnSiteInput.setText("");
-                    if (ninjaWebView != null) ninjaWebView.clearMatches();
-                } else {
-                    if (searchOnSiteInput != null) {
-                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                        if (imm != null) imm.hideSoftInputFromWindow(searchOnSiteInput.getWindowToken(), 0);
-                    }
-                    if (searchOnSiteLayout != null) searchOnSiteLayout.setVisibility(GONE);
-                    if (appBar != null) appBar.setVisibility(VISIBLE);
+    private void initSearchOnSite() {
+        findInPageCompose = findViewById(R.id.find_in_page_compose);
+        if (findInPageCompose instanceof androidx.compose.ui.platform.ComposeView) {
+            androidx.compose.ui.platform.ComposeView cv = (androidx.compose.ui.platform.ComposeView) findInPageCompose;
+            cv.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed.INSTANCE);
+            updateFindInPageCompose();
+        }
+    }
+
+    public void updateFindInPageCompose() {
+        if (!(findInPageCompose instanceof androidx.compose.ui.platform.ComposeView)) return;
+        androidx.compose.ui.platform.ComposeView cv = (androidx.compose.ui.platform.ComposeView) findInPageCompose;
+        cv.setContent(androidx.compose.runtime.internal.ComposableLambdaKt.composableLambdaInstance(192837465, true, (composer, key) -> {
+            String fontName = sp != null ? sp.getString("sp_app_font", "GS_FLEX") : "GS_FLEX";
+            String styleName = sp != null ? sp.getString("sp_color_style", "TONAL_SPOT") : "TONAL_SPOT";
+            String paletteId = sp != null ? sp.getString("sp_palette_id", com.petal.browser.ui.theme.ThemeKt.getDefaultPaletteId()) : com.petal.browser.ui.theme.ThemeKt.getDefaultPaletteId();
+            boolean dynamicColor = sp != null && sp.getBoolean("useDynamicColor", com.petal.browser.ui.theme.ThemeKt.isDynamicColorSupported());
+            boolean isAmoled = sp != null && sp.getBoolean("sp_amoled", false);
+
+            com.petal.browser.ui.theme.AppFont appFont = com.petal.browser.ui.theme.AppFont.valueOf(fontName != null ? fontName : "GS_FLEX");
+            com.petal.browser.ui.theme.ColorStyle colorStyle = com.petal.browser.ui.theme.ColorStyle.TONAL_SPOT;
+            try {
+                if (styleName != null) colorStyle = com.petal.browser.ui.theme.ColorStyle.valueOf(styleName);
+            } catch (Exception ignored) {}
+
+            com.petal.browser.ui.theme.ThemeKt.PetalExpressiveTheme(
+                dynamicColor,
+                isAmoled,
+                appFont,
+                colorStyle,
+                paletteId,
+                androidx.compose.runtime.internal.ComposableLambdaKt.composableLambda(composer, 102938475, true, (c, k) -> {
+                    com.petal.browser.compose.find.PetalFindInPageBarKt.PetalFindInPageBar(
+                        isFindInPageShowing,
+                        findInPageQuery,
+                        query -> {
+                            findInPageQuery = query;
+                            updateFindInPageCompose();
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                                com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                                if (query.isEmpty()) {
+                                    gv.clearMatches();
+                                } else {
+                                    gv.findAllAsync(query);
+                                }
+                            } else if (ninjaWebView != null) {
+                                if (query.isEmpty()) {
+                                    ninjaWebView.clearMatches();
+                                } else {
+                                    ninjaWebView.findAllAsync(query);
+                                }
+                            }
+                            return kotlin.Unit.INSTANCE;
+                        },
+                        () -> {
+                            // Find Next
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).findNext(true);
+                            } else if (ninjaWebView != null) {
+                                ninjaWebView.findNext(true);
+                            }
+                            return kotlin.Unit.INSTANCE;
+                        },
+                        () -> {
+                            // Find Previous
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).findNext(false);
+                            } else if (ninjaWebView != null) {
+                                ninjaWebView.findNext(false);
+                            }
+                            return kotlin.Unit.INSTANCE;
+                        },
+                        () -> {
+                            closeFindInPage();
+                            return kotlin.Unit.INSTANCE;
+                        },
+                        androidx.compose.ui.Modifier.Companion
+                    );
+                    return kotlin.Unit.INSTANCE;
+                }),
+                composer,
+                0,
+                0
+            );
+            return kotlin.Unit.INSTANCE;
+        }));
+    }
+
+    public void closeFindInPage() {
+        if (!isFindInPageShowing) return;
+        isFindInPageShowing = false;
+        findInPageQuery = "";
+        updateFindInPageCompose();
+        if (findInPageCompose != null) {
+            findInPageCompose.postDelayed(() -> {
+                if (!isFindInPageShowing && findInPageCompose != null) {
+                    findInPageCompose.setVisibility(GONE);
                 }
-            });
+            }, 300);
         }
-        if (searchOnSite_textField != null) {
-            searchOnSite_textField.setStartIconOnClickListener(v -> {
-                if (ninjaWebView != null) ninjaWebView.findNext(false);
-            });
-            searchOnSite_textField.setEndIconOnClickListener(v -> {
-                if (ninjaWebView != null) ninjaWebView.findNext(true);
-            });
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).clearMatches();
+        } else if (ninjaWebView != null) {
+            ninjaWebView.clearMatches();
         }
-        if (searchOnSiteInput != null) {
-            searchOnSiteInput.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) { }
-                @Override
-                public void afterTextChanged(Editable s) {
-                    if (ninjaWebView != null) {
-                        String query = s.toString();
-                        if (query.isEmpty()) {
-                            ninjaWebView.clearMatches();
-                        } else {
-                            ninjaWebView.findAllAsync(query);
-                        }
-                    }
-                }
-            });
-        }
+        if (appBar != null) appBar.setVisibility(VISIBLE);
+        updateBackCallbackState();
     }
 
     public void initPullToRefresh() {
@@ -4520,7 +4525,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         list_search.setOnItemClickListener((parent, view, position, id) -> {
             hideSearch();
             String url = ((TextView) view.findViewById(R.id.dateView)).getText().toString();
-            ninjaWebView.loadUrl(url);
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
         });
         list_search.setOnItemLongClickListener((adapterView, view, i, l) -> {
             String title = ((TextView) view.findViewById(R.id.titleView)).getText().toString();
@@ -4565,9 +4570,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                                 tab_container.removeView(album.getAlbumView());
                             }
                             detachTabSurface(album);
-                            if (album instanceof NinjaWebView) {
-                                ((NinjaWebView) album).destroy();
-                            }
+                            
                         }
                     }
                     BrowserContainer.clear();
@@ -4776,7 +4779,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                         ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
                     } else if (ninjaWebView != null) {
-                        ninjaWebView.loadUrl(url);
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
                     }
                     showAlbum(currentAlbumController, url);
                 },
@@ -4817,7 +4820,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                         ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
                     } else if (ninjaWebView != null) {
-                        ninjaWebView.loadUrl(url);
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
                     }
                     showAlbum(currentAlbumController, url);
                 },
@@ -4874,6 +4877,42 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void showSafeLockerScreen() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_safe = findViewById(R.id.fab_bubble);
+            if (fab_bubble_safe != null) fab_bubble_safe.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View safeLockerView = com.petal.browser.privacy.SafeLockerBridge.createSafeLockerView(
+                BrowserActivity.this,
+                () -> {
+                    isOverlayScreenShowing = false;
+                    removeOverlayViews();
+                    showAlbum(currentAlbumController);
+                    updatePersistentBottomNav();
+                    updateOmniBox();
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(safeLockerView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showSafeLocker() {
+        showSafeLockerScreen();
     }
 
     public void showCreditsScreen() {
@@ -5073,9 +5112,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void showDialogFastToggle(String title, String url, FloatingActionButton floatingActionButton) {
 
         listStandard = new List_standard(context);
-        if (currentAlbumController instanceof NinjaWebView) {
-            ninjaWebView = (NinjaWebView) currentAlbumController;
-        }
+        
 
         String profile;
         if (listStandard.isWhite(url)) {
@@ -5209,9 +5246,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 }  else if (profile.equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_images", checkbox_image.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_images", checkbox_image.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_images", checkbox_image.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_images", checkbox_image.isChecked()).apply();
                 }
             });
 
@@ -5220,12 +5257,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_java.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_javascript", checkbox_java.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_javascript", checkbox_java.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascript", checkbox_java.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_javascript", checkbox_java.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascript", checkbox_java.isChecked()).apply();
                 }
             });
 
@@ -5234,12 +5271,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_javaPopUp.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
                 }
             });
 
@@ -5248,12 +5285,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_cookies.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_cookies", checkbox_cookies.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_cookies", checkbox_cookies.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookies", checkbox_cookies.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_cookies", checkbox_cookies.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookies", checkbox_cookies.isChecked()).apply();
                 }
             });
 
@@ -5262,12 +5299,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_cookiesThirdParty.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
                 }
             });
 
@@ -5276,12 +5313,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_cookiesBanner.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
                 }
             });
 
@@ -5290,12 +5327,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_fingerPrint.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
                 }
             });
 
@@ -5304,12 +5341,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_adBlock.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_adBlock", checkbox_adBlock.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_adBlock", checkbox_adBlock.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_adBlock", checkbox_adBlock.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_adBlock", checkbox_adBlock.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_adBlock", checkbox_adBlock.isChecked()).apply();
                 }
             });
 
@@ -5318,12 +5355,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_trackingURL.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
                 }
             });
 
@@ -5332,12 +5369,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_saveData.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_saveData", checkbox_saveData.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_saveData", checkbox_saveData.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveData", checkbox_saveData.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_saveData", checkbox_saveData.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveData", checkbox_saveData.isChecked()).apply();
                 }
             });
 
@@ -5346,12 +5383,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_history.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_saveHistory", checkbox_history.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_saveHistory", checkbox_history.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveHistory", checkbox_history.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_saveHistory", checkbox_history.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveHistory", checkbox_history.isChecked()).apply();
                 }
             });
 
@@ -5360,12 +5397,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_location.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_location", checkbox_location.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_location", checkbox_location.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_location", checkbox_location.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_location", checkbox_location.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_location", checkbox_location.isChecked()).apply();
                 }
             });
 
@@ -5374,12 +5411,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_mic.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_microphone", checkbox_mic.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_microphone", checkbox_mic.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_microphone", checkbox_mic.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_microphone", checkbox_mic.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_microphone", checkbox_mic.isChecked()).apply();
                 }
             });
 
@@ -5388,12 +5425,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_camera.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_camera", checkbox_camera.isChecked()).apply();
-                } else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_camera", checkbox_camera.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_camera", checkbox_camera.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_camera", checkbox_camera.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_camera", checkbox_camera.isChecked()).apply();
                 }
             });
 
@@ -5402,12 +5439,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_dom.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_dom", checkbox_dom.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_dom", checkbox_dom.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_dom", checkbox_dom.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_dom", checkbox_dom.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_dom", checkbox_dom.isChecked()).apply();
                 }
             });
 
@@ -5424,12 +5461,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 checkbox_nightView.setOnClickListener(v -> {
                     if (listStandard.isWhite(url)){
                         sp.edit().putBoolean(profile + "_night", checkbox_nightView.isChecked()).apply();
-                    }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                    }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                         ninjaWebView.setProfileChanged();
                         setProfileIcon(buttonProfile, url);
-                        sp.edit().putBoolean(NinjaWebView.getProfile() + "_night", checkbox_nightView.isChecked()).apply();
+                        sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_night", checkbox_nightView.isChecked()).apply();
                     } else {
-                        sp.edit().putBoolean(NinjaWebView.getProfile() + "_night", checkbox_nightView.isChecked()).apply();
+                        sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_night", checkbox_nightView.isChecked()).apply();
                     }
                 });
             }
@@ -5439,12 +5476,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_desktop.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_desktop", checkbox_desktop.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_desktop", checkbox_desktop.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_desktop", checkbox_desktop.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_desktop", checkbox_desktop.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_desktop", checkbox_desktop.isChecked()).apply();
                 }
             });
 
@@ -5453,12 +5490,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             checkbox_drm.setOnClickListener(v -> {
                 if (listStandard.isWhite(url)){
                     sp.edit().putBoolean(profile + "_drm", checkbox_drm.isChecked()).apply();
-                }  else if (NinjaWebView.getProfile().equals("profileStandard")) {
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
                     ninjaWebView.setProfileChanged();
                     setProfileIcon(buttonProfile, url);
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_drm", checkbox_drm.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_drm", checkbox_drm.isChecked()).apply();
                 } else {
-                    sp.edit().putBoolean(NinjaWebView.getProfile() + "_drm", checkbox_drm.isChecked()).apply();
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_drm", checkbox_drm.isChecked()).apply();
                 }
             });
 
@@ -5559,7 +5596,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             button_help.setOnClickListener(view -> {
                 dialogFastToggle.cancel();
                 if (ninjaWebView != null) {
-                    ninjaWebView.loadUrl("about:blank");
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
                     showAlbum(currentAlbumController, "about:blank");
                 }
             });
@@ -5695,12 +5732,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         ));
 
                 FloatingActionButton buttonProfile = dialogView.findViewById(R.id.buttonProfile);
-                NinjaWebView.getBrowserController().setProfileIcon(buttonProfile, url);
+                this.setProfileIcon(buttonProfile, url);
                 FaviconHelper.setFavicon(context, dialogView, url, R.id.menu_icon, R.drawable.icon_image_broken);
                 buttonProfile.setOnClickListener(v -> showDialogFastToggle(title,url, buttonProfile));
                 buttonProfile.setOnLongClickListener(v -> {
                     sp.edit().putString("profile", "profileStandard").apply();
-                    NinjaWebView.getBrowserController().setProfileIcon(buttonProfile, url);
+                    this.setProfileIcon(buttonProfile, url);
                     if (!listStandard.isWhite(url)){
                         ninjaWebView.reload();
                     }return false;
@@ -5837,14 +5874,19 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         }
     }
     public void searchOnSite() {
-        if (appBar != null) appBar.setVisibility(GONE);
-        if (searchOnSiteLayout != null) {
-            searchOnSiteLayout.setVisibility(VISIBLE);
-            if (searchOnSiteInput != null) {
-                searchOnSiteInput.requestFocus();
-                HelperUnit.showSoftKeyboard(searchOnSiteInput);
-            }
+        String curUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (ninjaWebView != null ? ninjaWebView.getUrl() : "");
+        if (isPetalHomeSurfaceShowing || isHomePage(curUrl) || curUrl == null || curUrl.isEmpty() || curUrl.equalsIgnoreCase("about:blank")) {
+            // Find in page is exclusive to websites, not available on home page
+            return;
         }
+        if (appBar != null) appBar.setVisibility(GONE);
+        isFindInPageShowing = true;
+        findInPageQuery = "";
+        if (findInPageCompose != null) {
+            findInPageCompose.setVisibility(VISIBLE);
+        }
+        updateFindInPageCompose();
+        updateBackCallbackState();
     }
     public void saveBookmark(String title, String url) {
         if (url == null || url.trim().isEmpty() || isHomePage(url)) {
@@ -6058,7 +6100,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
                             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(localUrl);
                         } else if (ninjaWebView != null) {
-                            ninjaWebView.loadUrl(localUrl);
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(localUrl);
                         }
                     } else {
                         addAlbum(fileName, "about:blank" , true);
@@ -6524,11 +6566,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
                 manager = gv.getPwaManager();
                 if (manager == null) { manager = new com.petal.browser.pwa.PetalPwaManager(this, gv, null); gv.setPwaManager(manager); }
-            } else if (currentAlbumController instanceof com.petal.browser.view.NinjaWebView) {
-                com.petal.browser.view.NinjaWebView webView = (com.petal.browser.view.NinjaWebView) currentAlbumController;
-                manager = webView.getPwaManager();
-                if (manager == null) { manager = new com.petal.browser.pwa.PetalPwaManager(this, webView, null); webView.setPwaManager(manager); }
-            }
+            
             if (manager != null) manager.installCurrentPwa(this);
             else PetalToast.show(this, "No active web page to install");
         } catch (Exception e) {
@@ -6609,6 +6647,18 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             saveOpenedTabs();
         } catch (Exception e) {
             Log.e(TAG, "Error saving tab session in onPause", e);
+        }
+    }
+
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        try {
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.onLowMemory(this);
+            com.petal.browser.unit.TabThumbnailCache.clear();
+        } catch (Throwable t) {
+            Log.d(TAG, "Error in onLowMemory: " + t.getMessage());
         }
     }
 }

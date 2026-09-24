@@ -39,7 +39,6 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.petal.browser.extensions.PetalExtensionManager
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 
 interface PetalOverflowMenuActionHandler {
@@ -373,7 +372,7 @@ fun PetalOverflowMenuSheet(
         contentAlignment = Alignment.BottomEnd
     ) {
         Card(
-            shape = PetalBrowserShapes.MenuSurface,
+            shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface
@@ -476,12 +475,21 @@ fun PetalOverflowMenuSheet(
                             shape = com.petal.browser.ui.theme.PetalMaterialShapes.SoftBoom.toShape(),
                             onClick = onShareLink
                         ),
-                        ActionMatrixItem(
-                            icon = Icons.Rounded.FindInPage,
-                            label = "Find",
-                            shape = com.petal.browser.ui.theme.PetalMaterialShapes.Sunny.toShape(),
-                            onClick = onSearchOnSite
-                        )
+                        if (!isHomePage) {
+                            ActionMatrixItem(
+                                icon = Icons.Rounded.FindInPage,
+                                label = "Find",
+                                shape = com.petal.browser.ui.theme.PetalMaterialShapes.Sunny.toShape(),
+                                onClick = onSearchOnSite
+                            )
+                        } else {
+                            ActionMatrixItem(
+                                icon = Icons.Rounded.History,
+                                label = "History",
+                                shape = com.petal.browser.ui.theme.PetalMaterialShapes.Sunny.toShape(),
+                                onClick = onOpenHistory
+                            )
+                        }
                     )
                 )
 
@@ -677,12 +685,14 @@ fun PetalOverflowMenuSheet(
                     exit = shrinkVertically()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        MenuRowItem(
-                            icon = Icons.Rounded.Search,
-                            title = "Search on site",
-                            isSubItem = true,
-                            onClick = onSearchOnSite
-                        )
+                        if (!isHomePage) {
+                            MenuRowItem(
+                                icon = Icons.Rounded.FindInPage,
+                                title = "Find in page",
+                                isSubItem = true,
+                                onClick = onSearchOnSite
+                            )
+                        }
                         MenuRowItem(
                             icon = Icons.Rounded.MenuBook,
                             title = "Reading mode",
@@ -725,78 +735,6 @@ fun PetalOverflowMenuSheet(
                             title = "Safe Locker",
                             isSubItem = true,
                             onClick = onOpenSafeLocker
-                        )
-
-                        val sp = remember { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
-                        var universalCopyEnabled by remember {
-                            mutableStateOf(sp.getBoolean("petal_builtin_universal_copy", true))
-                        }
-                        var aiBlockerEnabled by remember {
-                            mutableStateOf(sp.getBoolean("petal_builtin_ai_blocker", true))
-                        }
-
-                        MenuRowItem(
-                            icon = Icons.Rounded.ContentCopy,
-                            title = "Universal Copy",
-                            subtitle = "Force text copy on blocked pages",
-                            isSubItem = true,
-                            trailingContent = {
-                                Switch(
-                                    checked = universalCopyEnabled,
-                                    onCheckedChange = { isChecked ->
-                                        universalCopyEnabled = isChecked
-                                        sp.edit().putBoolean("petal_builtin_universal_copy", isChecked).apply()
-                                        com.petal.browser.extensions.PetalBuiltInExtensionManager.setEnabled(
-                                            context,
-                                            "petal_builtin_universal_copy",
-                                            isChecked
-                                        )
-                                    },
-                                    modifier = Modifier.scale(0.8f)
-                                )
-                            },
-                            onClick = {
-                                val newState = !universalCopyEnabled
-                                universalCopyEnabled = newState
-                                sp.edit().putBoolean("petal_builtin_universal_copy", newState).apply()
-                                com.petal.browser.extensions.PetalBuiltInExtensionManager.setEnabled(
-                                    context,
-                                    "petal_builtin_universal_copy",
-                                    newState
-                                )
-                            }
-                        )
-
-                        MenuRowItem(
-                            icon = Icons.Rounded.SmartToy,
-                            title = "AI Overview Blocker",
-                            subtitle = "Collapse AI summary search cards",
-                            isSubItem = true,
-                            trailingContent = {
-                                Switch(
-                                    checked = aiBlockerEnabled,
-                                    onCheckedChange = { isChecked ->
-                                        aiBlockerEnabled = isChecked
-                                        sp.edit().putBoolean("petal_builtin_ai_blocker", isChecked).apply()
-                                        com.petal.browser.extensions.PetalBuiltInExtensionManager.setEnabled(
-                                            context,
-                                            "petal_builtin_ai_blocker",
-                                            isChecked
-                                        )
-                                    },
-                                    modifier = Modifier.scale(0.8f)
-                                )
-                            },
-                            onClick = {
-                                val newState = !aiBlockerEnabled
-                                aiBlockerEnabled = newState
-                                sp.edit().putBoolean("petal_builtin_ai_blocker", newState).apply()
-                                com.petal.browser.extensions.PetalBuiltInExtensionManager.setEnabled(
-                                    context,
-                                    "petal_builtin_ai_blocker",
-                                    newState
-                                )
-                            }
                         )
                     }
                 }
@@ -916,7 +854,7 @@ private fun MenuRowItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
-                        .clip(PetalBrowserShapes.ExtraSmall)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -975,7 +913,7 @@ private fun ExtensionMenuRowItem(
                     contentDescription = null,
                     modifier = Modifier
                         .size(24.dp)
-                        .clip(PetalBrowserShapes.ExtraSmall)
+                        .clip(RoundedCornerShape(6.dp))
                 )
             } else {
                 Icon(
