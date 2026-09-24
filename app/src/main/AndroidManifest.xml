@@ -37,7 +37,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
@@ -104,6 +103,11 @@
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
+
+        <!-- Google AdMob App ID (Play Store variant) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
 
         <!-- AppLocales Metadata Holder Service for AppCompat auto-store locales -->
         <service
@@ -431,10 +435,6 @@
 
         <receiver
             android:name="com.petal.browser.compose.downloads.PetalDownloadCancelReceiver"
-            android:exported="false" />
-
-        <receiver
-            android:name="com.petal.browser.unit.PetalUpdateInstallerReceiver"
             android:exported="false" />
 
 
