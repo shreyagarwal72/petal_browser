@@ -13,7 +13,6 @@ import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
 import com.petal.browser.controller.BrowserWebViewController
 import com.petal.browser.database.RecordAction
-import com.petal.browser.view.NinjaWebView
 import com.petal.browser.view.PetalGeckoView
 import java.util.Arrays
 import java.util.concurrent.Executors
@@ -81,31 +80,38 @@ object PetalTabSessionManager {
 
                 for (controller in controllers) {
                     // Privacy guarantee: NEVER persist incognito tabs
-                    val isIncognito = when (controller) {
-                        is PetalGeckoView -> controller.isIncognito()
-                        is NinjaWebView -> controller.isIncognito()
-                        is PlaceholderAlbumController -> controller.isIncognito()
-                        else -> false
-                    }
+                    val isIncognito = controller.isIncognito
+
                     if (isIncognito) continue
 
                     val rawUrl = controller.url ?: ""
+                    // Prefer persistentUrl for GeckoView tabs: currentUrl can be reset to
+                    // "about:blank" while a page is loading (GeckoView compositor reset).
+                    // persistentUrl holds the last real URL that was explicitly navigated to,
+                    // so we never save "about:blank" when the tab actually has real content.
+                    val effectiveUrl = when {
+                        controller is PetalGeckoView &&
+                        controller.persistentUrl.isNotBlank() &&
+                        !controller.persistentUrl.equals("about:blank", ignoreCase = true) ->
+                            controller.persistentUrl
+                        rawUrl.isNotBlank() && !rawUrl.equals("about:blank", ignoreCase = true) ->
+                            rawUrl
+                        else -> rawUrl
+                    }
+
                     val rawTitle = controller.title ?: ""
                     val tabId = when (controller) {
                         is PetalGeckoView -> controller.getTabId()
-                        is NinjaWebView -> controller.getTabId()
                         is PlaceholderAlbumController -> controller.getTabId()
                         else -> controller.hashCode().toString()
                     }
                     val groupId = when (controller) {
                         is PetalGeckoView -> controller.getTabGroupId()
-                        is NinjaWebView -> controller.getTabGroupId()
                         is PlaceholderAlbumController -> controller.getTabGroupId()
                         else -> null
                     }
                     val groupTitle = when (controller) {
                         is PetalGeckoView -> controller.getTabGroupTitle()
-                        is NinjaWebView -> controller.getTabGroupTitle()
                         is PlaceholderAlbumController -> controller.getTabGroupTitle()
                         else -> null
                     }
@@ -114,7 +120,7 @@ object PetalTabSessionManager {
                     val record = TabSessionRecord(
                         persistentTabId = tabId,
                         title = rawTitle,
-                        url = rawUrl,
+                        url = effectiveUrl,   // use effectiveUrl — never saves transient about:blank
                         isIncognito = false,
                         isActive = isActiveTab,
                         tabGroupId = groupId,
@@ -123,9 +129,10 @@ object PetalTabSessionManager {
                     )
                     records.add(record)
 
-                    if (rawUrl.isNotBlank()) {
-                        legacyUrls.add(rawUrl)
+                    if (effectiveUrl.isNotBlank()) {
+                        legacyUrls.add(effectiveUrl)
                     }
+
                 }
 
                 val sp = PreferenceManager.getDefaultSharedPreferences(context)

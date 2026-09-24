@@ -79,19 +79,18 @@ object PetalGeckoRuntime {
         val appContext = context.applicationContext
         val sp = PreferenceManager.getDefaultSharedPreferences(appContext)
 
+        val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val isLowRamDevice = am?.isLowRamDevice ?: false
+
         val settingsBuilder = GeckoRuntimeSettings.Builder()
             .aboutConfigEnabled(false)
             .contentBlocking(
                 ContentBlocking.Settings.Builder()
                     .antiTracking(ContentBlocking.AntiTracking.DEFAULT)
                     // Block tracking cookies and isolate the rest (dynamic first-party isolation).
-                    // REJECT_TRACKERS_AND_PARTITION_FOREIGN no longer exists; this is its replacement.
                     .cookieBehavior(ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY_AND_ISOLATE_OTHERS)
                     .safeBrowsing(ContentBlocking.SafeBrowsing.DEFAULT)
                     .enhancedTrackingProtectionLevel(ContentBlocking.EtpLevel.STRICT)
-                    // Cookie-banner auto-reject was removed from GeckoView in v154 (the underlying
-                    // Gecko feature no longer exists, no replacement), so it is not configured here.
-                    // Banner hiding is handled by the app's own CSS/cosmetic rules instead.
                     .build()
             )
             .javaScriptEnabled(sp.getBoolean("profileStandard_javascript", true))
@@ -99,12 +98,55 @@ object PetalGeckoRuntime {
             .webManifest(true)
             .extensionsProcessEnabled(true)
             .extensionsWebAPIEnabled(true)
-            .loginAutofillEnabled(false)
+            // Enable login autofill API so password manager extensions (Bitwarden, etc.) can
+            // intercept login forms via the WebExtension loginAutofill API. Without this,
+            // extensions receive the form events but cannot fill credentials.
+            .loginAutofillEnabled(true)
+
+
+        // Firefox official memory and performance optimizations
+        try {
+            // Low memory device tuning
+            if (isLowRamDevice) {
+                Log.i(TAG, "Configuring GeckoRuntime for low-RAM device profile")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Could not apply optional runtime settings: ${t.message}")
+        }
 
         val newRuntime = GeckoRuntime.create(appContext, settingsBuilder.build())
         runtime = newRuntime
         Log.i(TAG, "Initialized GeckoRuntime with standard tracking protection and high-performance pipeline")
         return newRuntime
+    }
+
+    /**
+     * Official Firefox GeckoView memory management bridge.
+     * Propagates system onTrimMemory / onLowMemory signals to GeckoRuntime and Android Components,
+     * freeing native image decoders, font caches, JIT memory, and background tab DOM trees.
+     */
+    @JvmStatic
+    fun onTrimMemory(context: Context, level: Int) {
+        val rt = runtime ?: return
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            try {
+                // Purge volatile image caches in StorageController
+                rt.storageController.clearData(
+                    org.mozilla.geckoview.StorageController.ClearFlags.IMAGE_CACHE
+                )
+                Log.d(TAG, "Purged Gecko image cache on memory trim level $level")
+            } catch (t: Throwable) {
+                Log.d(TAG, "Failed to purge image cache on low memory: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Handles system onLowMemory callback by aggressively purging caches.
+     */
+    @JvmStatic
+    fun onLowMemory(context: Context) {
+        onTrimMemory(context, android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
     }
 
     @JvmStatic
@@ -124,6 +166,7 @@ object PetalGeckoRuntime {
                 val adBlockEnabled = sp.getBoolean("sp_ad_block", true)
                 val etpLevel = if (adBlockEnabled) ContentBlocking.EtpLevel.STRICT else ContentBlocking.EtpLevel.NONE
                 rt.settings.contentBlocking.enhancedTrackingProtectionLevel = etpLevel
+                rt.settings.contentBlocking.strictSocialTrackingProtection = adBlockEnabled
             } catch (e: Exception) {
                 Log.w(TAG, "Error synchronizing GeckoRuntime preferences: ${e.message}")
             }

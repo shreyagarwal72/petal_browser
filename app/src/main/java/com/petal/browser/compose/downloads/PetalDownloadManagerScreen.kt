@@ -8,7 +8,7 @@
 
 package com.petal.browser.compose.downloads
 
-import com.petal.browser.ui.theme.PetalBrowserShapes
+import com.petal.browser.view.PetalToast;
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
@@ -318,7 +318,6 @@ fun PetalDownloadManagerScreen(
     val downloadList = remember(rawDownloadList, pendingDeletedIds) {
         rawDownloadList.filter { !pendingDeletedIds.contains(it.id) }
     }
-
     var sortOption by remember { mutableStateOf(DownloadSortOption.DATE_DESC) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
@@ -377,7 +376,16 @@ fun PetalDownloadManagerScreen(
     }
 
     if (pendingDeleteItems.isNotEmpty()) {
-        AlertDialog(onDismissRequest = { pendingDeleteItems = emptyList() }, shape = RoundedCornerShape(28.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, icon = { Icon(Icons.Rounded.DeleteForever, null, tint = MaterialTheme.colorScheme.error) }, title = { Text("Delete downloads?", fontWeight = FontWeight.Bold) }, text = { Column { Text("Remove ${pendingDeleteItems.size} downloads from the list?"); Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = deleteSelectedFiles, onCheckedChange = { deleteSelectedFiles = it; androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean("sp_delete_download_file", it).apply() }); Text("Also delete files from device storage") } } }, dismissButton = { TextButton(onClick = { pendingDeleteItems = emptyList() }) { Text("Cancel") } }, confirmButton = { Button(onClick = { val items = pendingDeleteItems; pendingDeleteItems = emptyList(); performStagedDelete(items) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } })
+        AlertDialog(
+            onDismissRequest = { pendingDeleteItems = emptyList() },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            icon = { Icon(Icons.Rounded.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete downloads?", fontWeight = FontWeight.Bold) },
+            text = { Column { Text("Remove ${pendingDeleteItems.size} downloads from the list?"); Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = deleteSelectedFiles, onCheckedChange = { deleteSelectedFiles = it; androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean("sp_delete_download_file", it).apply() }); Text("Also delete files from device storage") } } },
+            dismissButton = { TextButton(onClick = { pendingDeleteItems = emptyList() }) { Text("Cancel") } },
+            confirmButton = { Button(onClick = { val items = pendingDeleteItems; pendingDeleteItems = emptyList(); performStagedDelete(items) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } }
+        )
     }
 
     // Completed images are represented by the preview strip below. Keep active,
@@ -652,7 +660,7 @@ private fun DownloadedImagePreviewStrip(downloads: List<DownloadItem>) {
                     }
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    Surface(shape = PetalBrowserShapes.Small, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier
                         .fillMaxWidth()
                         .height(if (images.size == 1) 220.dp else 130.dp)
                         .combinedClickable(
@@ -733,7 +741,24 @@ private fun DownloadRowItem(
     var renameInput by remember { mutableStateOf(item.fileName) }
 
     if (showDeleteDialog) {
-        AlertDialog(onDismissRequest = { showDeleteDialog = false }, shape = RoundedCornerShape(28.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, icon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, title = { Text("Delete download?", fontWeight = FontWeight.Bold) }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Remove ${item.fileName} from the download list?"); Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = deleteFile, onCheckedChange = { deleteFile = it; androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean("sp_delete_download_file", it).apply() }); Text("Also delete the file from device storage") } } }, dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }, confirmButton = { Button(onClick = { showDeleteDialog = false; onDeleteItem() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } })
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            icon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete download?", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Remove ${item.fileName} from the download list?")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = deleteFile, onCheckedChange = { deleteFile = it; androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean("sp_delete_download_file", it).apply() })
+                        Text("Also delete the file from device storage")
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } },
+            confirmButton = { Button(onClick = { showDeleteDialog = false; onDeleteItem() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } }
+        )
     }
 
 
@@ -755,7 +780,7 @@ private fun DownloadRowItem(
                     onValueChange = { renameInput = it },
                     label = { Text("File Name") },
                     singleLine = true,
-                    shape = PetalBrowserShapes.Small,
+                    shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
@@ -796,7 +821,7 @@ private fun DownloadRowItem(
     }
 
     Card(
-        shape = PetalBrowserShapes.Card,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -1182,7 +1207,7 @@ internal fun openDownloadedFile(context: Context, item: DownloadItem) {
 private fun deleteDownloadedFile(context: Context, item: DownloadItem) {
     try {
         PetalFetchDownloadBridge.deleteDownload(context, item)
-        android.widget.Toast.makeText(context, "Deleted ${item.fileName}", android.widget.Toast.LENGTH_SHORT).show()
+        PetalToast.show(context, "Deleted ${item.fileName}", android.widget.Toast.LENGTH_SHORT)
     } catch (e: Exception) {
         e.printStackTrace()
     }

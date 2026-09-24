@@ -10,7 +10,6 @@
 
 package com.petal.browser.compose.home
 
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import android.content.Context
 import android.net.Uri
 import java.util.Locale
@@ -820,7 +819,7 @@ private fun PetalSearchBar(onSearch: (String) -> Unit) {
     )
 
     Surface(
-        shape = PetalBrowserShapes.Card,
+        shape = RoundedCornerShape(32.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 4.dp,
         shadowElevation = 6.dp,
@@ -969,7 +968,7 @@ private fun PetalGreetingTagline(profile: com.petal.browser.account.GoogleUserPr
     }
 
     Surface(
-        shape = PetalBrowserShapes.CardHero,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 10.dp, bottomEnd = 28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
         shadowElevation = 2.dp,
@@ -1200,7 +1199,7 @@ private fun EditShortcutDialog(
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceContainerLow,
-                            PetalBrowserShapes.Small
+                            RoundedCornerShape(16.dp)
                         )
                         .padding(12.dp)
                 ) {

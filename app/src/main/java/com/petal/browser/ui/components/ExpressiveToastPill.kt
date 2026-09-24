@@ -8,7 +8,6 @@ import androidx.compose.animation.slideOutVertically;
 import androidx.compose.foundation.background;
 import androidx.compose.foundation.layout.*;
 import androidx.compose.foundation.shape.RoundedCornerShape;
-import com.petal.browser.ui.theme.PetalBrowserShapes;
 import androidx.compose.material3.MaterialTheme;
 import androidx.compose.material3.Surface;
 import androidx.compose.material3.Text;
@@ -43,7 +42,7 @@ fun ExpressiveToastPill(
         modifier = modifier
     ) {
         Surface(
-            shape = PetalBrowserShapes.Pill,
+            shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHighest,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = 6.dp,

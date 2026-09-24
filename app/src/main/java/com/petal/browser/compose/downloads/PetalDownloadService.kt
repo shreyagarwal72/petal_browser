@@ -1,13 +1,17 @@
 package com.petal.browser.compose.downloads
 
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
+import com.petal.browser.activity.BrowserActivity
 import java.io.File
 
 class PetalDownloadService : Service() {
@@ -60,6 +64,7 @@ class PetalDownloadService : Service() {
     }
 
     private var wakeLock: PowerManager.WakeLock? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -143,7 +148,7 @@ class PetalDownloadService : Service() {
     fun updatePersistentNotification() {
         val active = PetalFetchDownloadBridge.downloadItems.value.filter { isActive(it.status) }
         if (active.isEmpty()) {
-            stopForegroundAndSelf()
+            mainHandler.post { stopForegroundAndSelf() }
             return
         }
         val item = active.first()
@@ -155,6 +160,41 @@ class PetalDownloadService : Service() {
         } else {
             "${active.size} downloads active in background"
         }
+        val openAppIntent = Intent(applicationContext, BrowserActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("open_downloads", true)
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            FOREGROUND_NOTIF_ID,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val isPaused = item.status == android.app.DownloadManager.STATUS_PAUSED
+        val toggleIntent = Intent(applicationContext, PetalDownloadCancelReceiver::class.java).apply {
+            action = if (isPaused) PetalDownloadCancelReceiver.ACTION_RESUME_DOWNLOAD else PetalDownloadCancelReceiver.ACTION_PAUSE_DOWNLOAD
+            putExtra(PetalDownloadCancelReceiver.EXTRA_DOWNLOAD_ID, item.id)
+        }
+        val togglePendingIntent = PendingIntent.getBroadcast(
+            applicationContext,
+            FOREGROUND_NOTIF_ID + 10,
+            toggleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val cancelIntent = Intent(applicationContext, PetalDownloadCancelReceiver::class.java).apply {
+            action = PetalDownloadCancelReceiver.ACTION_CANCEL_DOWNLOAD
+            putExtra(PetalDownloadCancelReceiver.EXTRA_DOWNLOAD_ID, item.id)
+        }
+        val cancelPendingIntent = PendingIntent.getBroadcast(
+            applicationContext,
+            FOREGROUND_NOTIF_ID + 20,
+            cancelIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val chipText = "${formatSpeed(item.speedBytesPerSec)} • $percent%"
         val notification = LiveUpdateNotificationManager.buildLiveNotification(
             applicationContext,
             FOREGROUND_NOTIF_ID.toLong(),
@@ -162,22 +202,27 @@ class PetalDownloadService : Service() {
             text,
             percent,
             total <= 0,
-            false,
-            "Background download",
-            null,
-            null,
-            null
+            isPaused,
+            chipText,
+            openAppPendingIntent,
+            cancelPendingIntent,
+            togglePendingIntent
         )
-        try {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            manager.notify(FOREGROUND_NOTIF_ID, notification)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(FOREGROUND_NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-            } else {
-                startForeground(FOREGROUND_NOTIF_ID, notification)
+
+        // NotificationManager.notify() is thread-safe, but startForeground()/stopForeground()
+        // must be called on the service's main thread to avoid RemoteException / ForegroundServiceStartNotAllowedException.
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        manager.notify(FOREGROUND_NOTIF_ID, notification)
+        mainHandler.post {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(FOREGROUND_NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                } else {
+                    startForeground(FOREGROUND_NOTIF_ID, notification)
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to update persistent notification", e)
             }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to update persistent notification", e)
         }
     }
 

@@ -12,7 +12,6 @@
 
 package com.petal.browser.compose.downloads
 
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent

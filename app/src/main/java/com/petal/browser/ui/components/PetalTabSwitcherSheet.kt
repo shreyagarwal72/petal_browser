@@ -53,7 +53,6 @@ import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 
 data class TabModel(
@@ -126,31 +125,22 @@ object PetalTabSwitcherBridge {
                                         if (album is com.petal.browser.view.PetalGeckoView) {
                                             val u = album.url
                                             if (u.isNotBlank() && !u.equals("about:blank", ignoreCase = true) && !u.equals("petal://home", ignoreCase = true)) u else album.getAlbumUrl()
-                                        } else if (album is com.petal.browser.view.NinjaWebView) {
-                                            val u = album.url
-                                            if (!u.isNullOrBlank() && !u.equals("about:blank", ignoreCase = true) && !u.equals("petal://home", ignoreCase = true)) u else album.getAlbumUrl()
                                         } else {
                                             album.getUrl()
                                         }
                                     } catch (_: Exception) { null }
+
                                     val isIncognitoTab = (album is com.petal.browser.view.PetalGeckoView && album.isIncognito()) ||
-                                            ((album is com.petal.browser.view.NinjaWebView) && album.isIncognito())
+                                            false
                                     val faviconBitmap = when (album) {
                                         is com.petal.browser.view.PetalGeckoView -> album.getFavicon()
-                                        is com.petal.browser.view.NinjaWebView -> album.getFavicon()
+                                        
                                         is PlaceholderAlbumController -> album.getFavicon()
                                         else -> null
                                     }
                                     val previewBitmap = when (album) {
                                         is com.petal.browser.view.PetalGeckoView -> {
                                             album.getCachedPreviewBitmap()
-                                                ?: com.petal.browser.unit.TabThumbnailCache.get(album.getTabId())
-                                                ?: com.petal.browser.unit.TabThumbnailCache.get(album.getAlbumUrl())
-                                                ?: com.petal.browser.unit.TabThumbnailCache.get(album.url)
-                                        }
-                                        is com.petal.browser.view.NinjaWebView -> {
-                                            album.getCachedPreviewBitmap()
-                                                ?: album.capturePreviewBitmap()
                                                 ?: com.petal.browser.unit.TabThumbnailCache.get(album.getTabId())
                                                 ?: com.petal.browser.unit.TabThumbnailCache.get(album.getAlbumUrl())
                                                 ?: com.petal.browser.unit.TabThumbnailCache.get(album.url)
@@ -162,6 +152,7 @@ object PetalTabSwitcherBridge {
                                         else -> com.petal.browser.unit.TabThumbnailCache.get(album.hashCode().toString())
                                     }
 
+
                                     val displayTitle = when {
                                         !rawTitle.isNullOrBlank() && !rawTitle.equals("about:blank", ignoreCase = true) && !rawTitle.equals("Petal Start", ignoreCase = true) && !rawTitle.equals("Petal Home", ignoreCase = true) -> rawTitle
                                         !rawUrl.isNullOrBlank() && !rawUrl.equals("about:blank", ignoreCase = true) && !rawUrl.startsWith("file:///android_asset/") && !rawUrl.equals("petal://home", ignoreCase = true) && !rawUrl.equals("Petal Home", ignoreCase = true) -> rawUrl
@@ -171,14 +162,14 @@ object PetalTabSwitcherBridge {
                                     val group = com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(context, album.hashCode().toString())
                                     val webViewGroupId = when (album) {
                                         is com.petal.browser.view.PetalGeckoView -> album.getTabGroupId()
-                                        is com.petal.browser.view.NinjaWebView -> album.tabGroupId
+                                        
                                         is PlaceholderAlbumController -> album.getTabGroupId()
                                         else -> null
                                     }
                                     val effectiveGroupId = group?.id ?: webViewGroupId
                                     val effectiveGroupTitle = group?.title ?: when (album) {
                                         is com.petal.browser.view.PetalGeckoView -> album.getTabGroupTitle()
-                                        is com.petal.browser.view.NinjaWebView -> album.tabGroupTitle
+                                        
                                         is PlaceholderAlbumController -> album.getTabGroupTitle()
                                         else -> null
                                     }
@@ -226,11 +217,10 @@ object PetalTabSwitcherBridge {
                                 tabItems.removeAll { it.id == tabItem.id }
                                 if (targetAlbum is com.petal.browser.view.PetalGeckoView) {
                                     com.petal.browser.unit.TabThumbnailCache.remove(targetAlbum.getTabId())
-                                } else if (targetAlbum is com.petal.browser.view.NinjaWebView) {
-                                    com.petal.browser.unit.TabThumbnailCache.remove(targetAlbum.getTabId())
                                 } else if (targetAlbum is PlaceholderAlbumController) {
                                     com.petal.browser.unit.TabThumbnailCache.remove(targetAlbum.getTabId())
                                 }
+
                                 com.petal.browser.unit.TabThumbnailCache.remove(tabItem.id)
                                 onCloseTab(targetAlbum)
                                 com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(context)
@@ -251,7 +241,7 @@ object PetalTabSwitcherBridge {
                             val targetAlbum = BrowserContainer.list().find { it.hashCode().toString() == tabItem.id }
                             when (targetAlbum) {
                                 is com.petal.browser.view.PetalGeckoView -> targetAlbum.getMediaBridge()?.setMuted(muted)
-                                is com.petal.browser.view.NinjaWebView -> targetAlbum.getMediaBridge()?.setMuted(muted)
+                                
                             }
                         },
                         onCreateGroup = { tabItem ->
@@ -313,17 +303,9 @@ object PetalTabSwitcherBridge {
                                         }
                                     }
                                 }
-                            } else if (targetAlbum is com.petal.browser.view.NinjaWebView) {
-                                targetAlbum.capturePreviewBitmapAsync { bitmap ->
-                                    if (bitmap != null) {
-                                        val index = tabItems.indexOfFirst { it.id == tabItem.id }
-                                        if (index >= 0) {
-                                            tabItems[index] = tabItems[index].copy(previewBitmap = bitmap)
-                                        }
-                                    }
-                                }
                             }
                         },
+
                         onDuplicateTab = { tabItem ->
                             if (activity is BrowserActivity) {
                                 val url = if (tabItem.url.isBlank() || tabItem.url == "Petal Home") "about:blank" else tabItem.url
@@ -387,7 +369,7 @@ fun PetalTabSwitcherContent(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = PetalBrowserShapes.Sheet,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -419,7 +401,7 @@ fun PetalTabSwitcherContent(
                     // Far Left: Rounded square "new tab" button with + icon
                     Surface(
                         onClick = onNewTab,
-                        shape = PetalBrowserShapes.ExtraSmall,
+                        shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(40.dp).popIn()
@@ -435,7 +417,7 @@ fun PetalTabSwitcherContent(
 
                     // Center-Left: Pill-shaped segmented control (List vs Grid)
                     Surface(
-                        shape = PetalBrowserShapes.Pill,
+                        shape = RoundedCornerShape(50),
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier.height(40.dp)
                     ) {
@@ -447,7 +429,7 @@ fun PetalTabSwitcherContent(
                             // List View Toggle Button
                             Surface(
                                 onClick = { isGridView = false },
-                                shape = PetalBrowserShapes.Pill,
+                                shape = RoundedCornerShape(50),
                                 color = if (!isGridView) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 contentColor = if (!isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
@@ -466,7 +448,7 @@ fun PetalTabSwitcherContent(
                             // Grid View Toggle Button
                             Surface(
                                 onClick = { isGridView = true },
-                                shape = PetalBrowserShapes.Pill,
+                                shape = RoundedCornerShape(50),
                                 color = if (isGridView) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 contentColor = if (isGridView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
@@ -551,7 +533,7 @@ fun PetalTabSwitcherContent(
                         }
                     },
                     singleLine = true,
-                    shape = PetalBrowserShapes.Pill,
+                    shape = RoundedCornerShape(50),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -716,7 +698,7 @@ private fun EmptyStateIllustration() {
     ) {
         // Back card (tilted diagonally behind)
         Surface(
-            shape = PetalBrowserShapes.Small,
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
             border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
             modifier = Modifier
@@ -730,7 +712,7 @@ private fun EmptyStateIllustration() {
 
         // Front card (tilted diagonally in front)
         Surface(
-            shape = PetalBrowserShapes.Small,
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHighest,
             border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
             shadowElevation = 6.dp,
@@ -765,7 +747,7 @@ fun TabCard(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     Card(
-        shape = PetalBrowserShapes.Small,
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (tab.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.surfaceContainer
@@ -774,7 +756,7 @@ fun TabCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(105.dp)
-            .border(borderWidth, borderColor, PetalBrowserShapes.Small)
+            .border(borderWidth, borderColor, RoundedCornerShape(20.dp))
             .bouncyClickable { onSelect() }
             .entrance(index = 0)
     ) {
@@ -839,7 +821,7 @@ fun TabCard(
 
             if (tab.isActive) {
                 Surface(
-                    shape = PetalBrowserShapes.ExtraSmall,
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.align(Alignment.End)

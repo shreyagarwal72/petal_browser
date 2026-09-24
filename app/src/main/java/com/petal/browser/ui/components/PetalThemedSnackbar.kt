@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -17,6 +16,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.petal.browser.ui.theme.PetalBrowserShapes
 
 /**
  * Shared Material 3 Expressive themed Snackbar composable.
@@ -42,10 +43,20 @@ fun PetalThemedSnackbar(
         tonalElevation = 6.dp,
         shadowElevation = 10.dp
     ) {
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), Arrangement.spacedBy(12.dp), androidx.compose.ui.Alignment.CenterVertically) {
-            Text(snackbarData.visuals.message, Modifier.weight(1f), color = contentColor, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-            snackbarData.visuals.actionLabel?.let { label -> TextButton(onClick = { snackbarData.performAction() }) { Text(label, color = actionColor, fontWeight = FontWeight.Bold) } }
-            if (snackbarData.visuals.withDismissAction) IconButton(onClick = { snackbarData.dismiss() }) { Icon(Icons.Rounded.Close, "Dismiss", tint = dismissActionColor) }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text(text = snackbarData.visuals.message, modifier = Modifier.weight(1f), color = contentColor, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+            snackbarData.visuals.actionLabel?.let { label ->
+                TextButton(onClick = { snackbarData.performAction() }) { Text(label, color = actionColor, fontWeight = FontWeight.Bold) }
+            }
+            if (snackbarData.visuals.withDismissAction) {
+                IconButton(onClick = { snackbarData.dismiss() }) {
+                    Icon(Icons.Rounded.Close, "Dismiss", tint = dismissActionColor)
+                }
+            }
         }
     }
 }

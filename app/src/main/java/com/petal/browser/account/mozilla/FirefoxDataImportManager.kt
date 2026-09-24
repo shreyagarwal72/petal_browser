@@ -17,18 +17,24 @@ object FirefoxDataImportManager {
             if (text.trimStart().startsWith("[")) importJson(text, action) else importBookmarksHtml(text, action)
         } finally { action.close() }
     }
+
     private fun importBookmarksHtml(text: String, action: RecordAction): Int {
-        val matcher = Pattern.compile("<A[^>]*HREF=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</A>", Pattern.CASE_INSENSITIVE or Pattern.DOTALL).matcher(text)
+        val pattern = Pattern.compile("<A[^>]*HREF=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</A>", Pattern.CASE_INSENSITIVE or Pattern.DOTALL)
+        val matcher = pattern.matcher(text)
         var count = 0
         while (matcher.find()) {
             val url = matcher.group(1)?.trim().orEmpty()
             val title = matcher.group(2)?.replace(Regex("<[^>]+>"), "")?.trim().orEmpty()
-            if (url.startsWith("http://") || url.startsWith("https://")) { action.addBookmark(Record(title.ifBlank { url }, url, 0L, 0L)); count++ }
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                action.addBookmark(Record(title.ifBlank { url }, url, 0L, 0L)); count++
+            }
         }
         return count
     }
+
     private fun importJson(text: String, action: RecordAction): Int {
-        val array = JSONArray(text); var count = 0
+        val array = JSONArray(text)
+        var count = 0
         for (i in 0 until array.length()) {
             val item = array.optJSONObject(i) ?: continue
             val url = item.optString("url", item.optString("uri", "")).trim()

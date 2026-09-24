@@ -81,7 +81,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import kotlin.math.roundToInt
 
 /**
@@ -199,7 +198,7 @@ fun PetalFloatingStatusCard(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = bottomPadding)
         ) {
-            val cardShape = PetalBrowserShapes.Card
+            val cardShape = RoundedCornerShape(24.dp)
             val effectiveContainerColor = data.containerColor
                 ?: MaterialTheme.colorScheme.surfaceContainerHigh
             val effectiveContentColor = data.contentColor
@@ -303,7 +302,7 @@ fun PetalFloatingStatusCard(
                             Button(
                                 onClick = data.onSecondaryAction,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                shape = PetalBrowserShapes.Pill,
+                                shape = RoundedCornerShape(50),
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -324,7 +323,7 @@ fun PetalFloatingStatusCard(
                             Button(
                                 onClick = data.onPrimaryAction,
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                                shape = PetalBrowserShapes.Pill,
+                                shape = RoundedCornerShape(50),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary

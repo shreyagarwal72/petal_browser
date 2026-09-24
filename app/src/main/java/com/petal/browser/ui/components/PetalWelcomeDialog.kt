@@ -1,5 +1,6 @@
 package com.petal.browser.ui.components
 
+import com.petal.browser.view.PetalToast;
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -72,7 +73,6 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.petal.browser.R
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.unit.HelperUnit
 import kotlinx.coroutines.launch
@@ -305,7 +305,7 @@ private fun SetupBottomBar(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 3.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        shape = PetalBrowserShapes.Sheet,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -461,7 +461,7 @@ private fun WelcomeStepPage() {
 
     // App Hero Icon & Badge Card
     Surface(
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -555,7 +555,7 @@ private fun EssentialPermissionsStepPage(activity: Activity?, context: Context) 
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -633,13 +633,13 @@ private fun PermissionStatusRow(
         Spacer(Modifier.width(8.dp))
 
         if (isGranted) {
-            FilledTonalButton(onClick = {}, enabled = false, shape = PetalBrowserShapes.ExtraSmall, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+            FilledTonalButton(onClick = {}, enabled = false, shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                 Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Granted", style = MaterialTheme.typography.labelSmall)
             }
         } else {
-            Button(onClick = onGrant, shape = PetalBrowserShapes.ExtraSmall, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+            Button(onClick = onGrant, shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                 Text("Grant", style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -693,7 +693,7 @@ private fun NotificationPermissionStepPage(activity: Activity?, context: Context
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -725,7 +725,7 @@ private fun NotificationPermissionStepPage(activity: Activity?, context: Context
                     }
                 },
                 enabled = !hasNotification,
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -758,9 +758,9 @@ private fun BackupFeatureStepPage(context: Context) {
                     true
                 )
                 restoreSuccessMessage = "Data & preferences successfully restored!"
-                Toast.makeText(context, "Data restored successfully!", Toast.LENGTH_SHORT).show()
+                PetalToast.show(context, "Data restored successfully!", Toast.LENGTH_SHORT)
             } catch (e: Exception) {
-                Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+                PetalToast.show(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG)
             }
         }
     }
@@ -803,7 +803,7 @@ private fun BackupFeatureStepPage(context: Context) {
                 showRestorePicker = true
             },
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-            shape = PetalBrowserShapes.Small,
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -824,7 +824,7 @@ private fun BackupFeatureStepPage(context: Context) {
         if (restoreSuccessMessage != null) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -859,9 +859,9 @@ private fun BackupFeatureStepPage(context: Context) {
                         true
                     )
                     restoreSuccessMessage = "Data & preferences successfully restored!"
-                    Toast.makeText(context, "Data restored successfully!", Toast.LENGTH_SHORT).show()
+                    PetalToast.show(context, "Data restored successfully!", Toast.LENGTH_SHORT)
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    PetalToast.show(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG)
                 }
             },
             onBrowseSystemFallback = {
@@ -917,7 +917,7 @@ private fun ThemeAndLanguageStepPage(sp: SharedPreferences, activity: Activity?)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
@@ -944,7 +944,7 @@ private fun ThemeAndLanguageStepPage(sp: SharedPreferences, activity: Activity?)
                             }
                             AppCompatDelegate.setDefaultNightMode(nightMode)
                         },
-                        shape = PetalBrowserShapes.Small,
+                        shape = RoundedCornerShape(16.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.weight(1f).height(44.dp)
@@ -970,7 +970,7 @@ private fun ThemeAndLanguageStepPage(sp: SharedPreferences, activity: Activity?)
                     isAmoled = newValue
                     sp.edit().putBoolean("sp_amoled", newValue).apply()
                 },
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 color = if (isAmoled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(if (isAmoled) 2.dp else 1.dp, if (isAmoled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                 modifier = Modifier.fillMaxWidth()
@@ -1029,7 +1029,7 @@ private fun ThemeAndLanguageStepPage(sp: SharedPreferences, activity: Activity?)
                                 HelperUnit.setAppLanguage(context, tag)
                             }
                         },
-                        shape = PetalBrowserShapes.Small,
+                        shape = RoundedCornerShape(16.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.height(38.dp)
@@ -1093,7 +1093,7 @@ private fun SetupPetalAiKeyStepPage(sp: SharedPreferences) {
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
@@ -1137,7 +1137,7 @@ private fun SetupPetalAiKeyStepPage(sp: SharedPreferences) {
                 label = { Text("API Key (Optional)") },
                 placeholder = { Text("Paste your API key here...") },
                 singleLine = true,
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -1203,7 +1203,7 @@ private fun SearchEngineStepPage(sp: SharedPreferences) {
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1288,7 +1288,7 @@ private fun DefaultFontStepPage(sp: SharedPreferences) {
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1300,7 +1300,7 @@ private fun DefaultFontStepPage(sp: SharedPreferences) {
                 },
                 border = BorderStroke(if (isFlexSelected) 2.dp else 1.dp, if (isFlexSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                 color = if (isFlexSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1322,7 +1322,7 @@ private fun DefaultFontStepPage(sp: SharedPreferences) {
                 },
                 border = BorderStroke(if (isCustomSelected) 2.dp else 1.dp, if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                 color = if (isCustomSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-                shape = PetalBrowserShapes.Small,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1380,7 +1380,7 @@ private fun AdBlockerStepPage(sp: SharedPreferences) {
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = PetalBrowserShapes.Dialog,
+        shape = RoundedCornerShape(22.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Surface(
@@ -1389,7 +1389,7 @@ private fun AdBlockerStepPage(sp: SharedPreferences) {
                 isAdBlockEnabled = newValue
                 sp.edit().putBoolean("sp_ad_block", newValue).apply()
             },
-            shape = PetalBrowserShapes.Dialog,
+            shape = RoundedCornerShape(22.dp),
             color = if (isAdBlockEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainerHigh,
             border = BorderStroke(if (isAdBlockEnabled) 2.dp else 1.dp, if (isAdBlockEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth()

@@ -12,7 +12,6 @@ import com.petal.browser.activity.Settings_Delete
 import com.petal.browser.database.RecordAction
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.view.PetalToast
-import com.petal.browser.view.NinjaWebView
 import com.petal.browser.view.PetalGeckoView
 
 /**
@@ -247,22 +246,7 @@ object BrowserNavigationDelegate {
                 }
 
                 override fun onOpenSafeLocker() {
-                    val composeView = androidx.compose.ui.platform.ComposeView(activity).apply {
-                        setViewTreeLifecycleOwner(activity)
-                        setViewTreeViewModelStoreOwner(activity)
-                        setViewTreeSavedStateRegistryOwner(activity)
-                        setContent {
-                            com.petal.browser.ui.theme.PetalExpressiveTheme {
-                                com.petal.browser.privacy.SafeLockerSheet(
-                                    onDismissRequest = {
-                                        (parent as? android.view.ViewGroup)?.removeView(this)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    val decor = activity.window.decorView as? android.view.ViewGroup
-                    decor?.addView(composeView)
+                    activity.showSafeLocker()
                 }
 
                 override fun onTriggerMediaMode() {

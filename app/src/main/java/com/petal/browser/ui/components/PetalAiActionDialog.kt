@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -31,7 +30,7 @@ fun PetalAiActionDialog(
 ) {
     var rememberAsDefault by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    PetalExpressiveDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,

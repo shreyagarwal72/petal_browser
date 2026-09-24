@@ -29,9 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.browser.AlbumController
-import com.petal.browser.view.NinjaWebView
 import com.petal.browser.view.PetalGeckoView
-import com.petal.browser.ui.theme.PetalBrowserShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,11 +40,10 @@ fun PetalSiteInfoBottomSheet(
 ) {
     val context = LocalContext.current
     val geckoView = albumController as? PetalGeckoView
-    val webView = albumController as? NinjaWebView
-
+    
     val currentUrl = albumController?.url ?: ""
     val domain = remember(currentUrl) { HelperUnit.domain(currentUrl) }
-    val favicon: Bitmap? = geckoView?.getFavicon() ?: webView?.favicon
+    val favicon: Bitmap? = geckoView?.getFavicon()
 
     // Check GeckoView SecurityInformation if available, plus URL scheme
     val geckoSecurity = geckoView?.currentSecurityInfo
@@ -67,7 +64,7 @@ fun PetalSiteInfoBottomSheet(
     val isHttps = urlScheme == "https" || geckoSecurity?.isSecure == true
     val isHttp = urlScheme == "http"
     val isInternalPage = currentUrl.startsWith("petal:") || currentUrl.startsWith("about:")
-    val sslCertificate: SslCertificate? = webView?.certificate
+    val sslCertificate: SslCertificate? = null
     val isSecure = isHttps || (isInternalPage && currentUrl.isNotEmpty())
 
     // Cookie Count for domain
@@ -91,7 +88,7 @@ fun PetalSiteInfoBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        shape = PetalBrowserShapes.Sheet,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         dragHandle = {
             Box(
@@ -99,7 +96,7 @@ fun PetalSiteInfoBottomSheet(
                     .padding(vertical = 12.dp)
                     .width(42.dp)
                     .height(4.5.dp)
-                    .clip(PetalBrowserShapes.Pill)
+                    .clip(RoundedCornerShape(50))
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
             )
         }
@@ -111,7 +108,7 @@ fun PetalSiteInfoBottomSheet(
         ) {
             // --- Domain & Security Header ---
             Card(
-                shape = PetalBrowserShapes.Card,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -182,7 +179,7 @@ fun PetalSiteInfoBottomSheet(
 
             // --- SSL & Connection Security Card ---
             Card(
-                shape = PetalBrowserShapes.Card,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -272,7 +269,7 @@ fun PetalSiteInfoBottomSheet(
             )
 
             Card(
-                shape = PetalBrowserShapes.Card,
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -290,7 +287,7 @@ fun PetalSiteInfoBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(PetalBrowserShapes.ExtraSmall)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
@@ -341,7 +338,7 @@ fun PetalSiteInfoBottomSheet(
                         DropdownMenu(
                             expanded = siteResetExpanded,
                             onDismissRequest = { siteResetExpanded = false },
-                            shape = PetalBrowserShapes.Small,
+                            shape = RoundedCornerShape(18.dp),
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             DropdownMenuItem(
@@ -422,7 +419,7 @@ fun PetalSiteInfoBottomSheet(
                         if (allowed && context is android.app.Activity) {
                             HelperUnit.grantPermissionsCamera(context)
                         }
-                        geckoView?.reloadWithoutInit() ?: webView?.reloadWithoutInit()
+                        geckoView?.reloadWithoutInit()
                     },
                     leadingIcon = {
                         PetalShapeIconBadge(
@@ -450,7 +447,7 @@ fun PetalSiteInfoBottomSheet(
                         if (allowed && context is android.app.Activity) {
                             HelperUnit.grantPermissionsMic(context)
                         }
-                        geckoView?.reloadWithoutInit() ?: webView?.reloadWithoutInit()
+                        geckoView?.reloadWithoutInit()
                     },
                     leadingIcon = {
                         PetalShapeIconBadge(
@@ -475,7 +472,6 @@ fun PetalSiteInfoBottomSheet(
                     onCheckedChange = { allowed ->
                         isLocationAllowed = allowed
                         sp.edit().putBoolean(profile + "_location", allowed).apply()
-                        webView?.getSettings()?.setGeolocationEnabled(allowed)
                         if (allowed && context is android.app.Activity) {
                             HelperUnit.grantPermissionsLoc(context)
                         } else if (!allowed) {
@@ -483,7 +479,7 @@ fun PetalSiteInfoBottomSheet(
                                 GeolocationPermissions.getInstance().clear(domain)
                             } catch (ignored: Exception) {}
                         }
-                        geckoView?.reloadWithoutInit() ?: webView?.reloadWithoutInit()
+                        geckoView?.reloadWithoutInit()
                     },
                     leadingIcon = {
                         PetalShapeIconBadge(

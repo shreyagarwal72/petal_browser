@@ -81,7 +81,6 @@ import com.petal.browser.haptics.PetalHapticEngine
 import com.petal.browser.media.PetalMediaBridge
 import com.petal.browser.ui.theme.AppFont
 import com.petal.browser.ui.theme.ColorStyle
-import com.petal.browser.ui.theme.PetalBrowserShapes
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -240,7 +239,7 @@ fun PetalFloatingMediaIslandContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp),
-            shape = PetalBrowserShapes.Pill,
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
             tonalElevation = 6.dp,
             shadowElevation = 10.dp,
