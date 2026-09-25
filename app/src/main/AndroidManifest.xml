@@ -54,7 +54,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Queries for Google Lens, Google App and 1DM Downloader integration -->
+    <!-- Remove broad QUERY_ALL_PACKAGES merged from library manifests (e.g. Mozilla feature-pwa)
+         to comply with Google Play Store Sensitive Permissions Policy without declaration form -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:node="remove" />
+
+    <!-- Queries for Google Lens, Google App and external browser intent integration -->
     <queries>
         <package android:name="com.google.ar.lens" />
         <package android:name="com.google.android.googlequicksearchbox" />
@@ -82,6 +88,35 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="googleapp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
     </queries>
 
