@@ -32,22 +32,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Release APKs & AAB Bundle
-        run: |
-          mkdir -p raw_apks raw_aabs
-          ./gradlew assembleRelease bundleRelease --stacktrace
-          for apk in app/build/outputs/apk/release/*.apk; do
-            if [ -f "$apk" ]; then
-              cp "$apk" raw_apks/
-            fi
-          done
-          for aab in app/build/outputs/bundle/release/*.aab; do
-            if [ -f "$aab" ]; then
-              cp "$aab" raw_aabs/
-            fi
-          done
-
-      - name: Sign & ZipAlign Release APKs & AAB
+      - name: Setup Signing Keystore
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           ALIAS: ${{ secrets.ALIAS }}
@@ -79,7 +64,6 @@ jobs:
             keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1 | head -6
           fi
 
-          # Determine alias: if ALIAS_NAME is provided and found, use it; otherwise detect alias dynamically from keystore
           DETECTED_ALIAS=$(keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>/dev/null | grep 'PrivateKeyEntry' | head -n 1 | awk -F ',' '{print $1}' | xargs)
           if [ -n "$ALIAS_NAME" ] && keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1 | grep -q "$ALIAS_NAME"; then
             echo "✅ Specified alias '$ALIAS_NAME' verified in keystore."
@@ -91,8 +75,37 @@ jobs:
             keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1
             exit 1
           fi
-          echo "🔑 Final signing alias: $ALIAS_NAME"
 
+          echo "KEYSTORE_PATH=/tmp/signing.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_STORE_PASS=$STORE_PASS" >> $GITHUB_ENV
+          echo "KEYSTORE_KEY_PASS=$KEY_PASS" >> $GITHUB_ENV
+          echo "KEYSTORE_ALIAS=$ALIAS_NAME" >> $GITHUB_ENV
+
+      - name: Build Release APKs & AAB Bundle
+        run: |
+          mkdir -p raw_apks raw_aabs
+          ./gradlew assembleRelease bundleRelease \
+            -PRELEASE_STORE_FILE="$KEYSTORE_PATH" \
+            -PRELEASE_STORE_PASSWORD="$KEYSTORE_STORE_PASS" \
+            -PRELEASE_KEY_ALIAS="$KEYSTORE_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$KEYSTORE_KEY_PASS" \
+            --stacktrace
+          for apk in app/build/outputs/apk/release/*.apk; do
+            if [ -f "$apk" ]; then
+              cp "$apk" raw_apks/
+            fi
+          done
+          for aab in app/build/outputs/bundle/release/*.aab; do
+            if [ -f "$aab" ]; then
+              cp "$aab" raw_aabs/
+            fi
+          done
+
+      - name: Sign & ZipAlign Release APKs & AAB
+        run: |
+          STORE_PASS="$KEYSTORE_STORE_PASS"
+          KEY_PASS="$KEYSTORE_KEY_PASS"
+          ALIAS_NAME="$KEYSTORE_ALIAS"
           ANDROID_SDK_BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
           echo "Using Android Build-Tools: $ANDROID_SDK_BUILD_TOOLS"
 
