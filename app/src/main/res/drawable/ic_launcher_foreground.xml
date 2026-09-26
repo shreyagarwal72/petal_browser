@@ -1,40 +1,59 @@
-<!--
-  ~ Copyright (C) 2026 The Android Open Source Project
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="200dp"
-    android:height="200dp"
-    android:viewportWidth="32"
-    android:viewportHeight="32">
-    <group
-        android:pivotX="16"
-        android:pivotY="16"
-        android:scaleX="0.45"
-        android:scaleY="0.45">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Material 3 Expressive Petal Emblem -->
 
-        <path
-            android:fillColor="#547A95"
-            android:pathData="M23,28L23,28c-1.1,0 -2.1,-0.7 -2.5,-1.8c0,-0.1 0,-0.2 -0.1,-0.2h-8.9c0,0.1 0,0.2 -0.1,0.2C11.1,27.3 10.1,28 9,28h0c-0.6,0 -1,0.4 -1,1s0.4,1 1,1h14c0.6,0 1,-0.4 1,-1S23.6,28 23,28z" />
+    <!-- Shadow Layer for Depth -->
+    <path
+        android:fillColor="#15000000"
+        android:pathData="M54,26 C68,26 78,36 78,50 C78,64 68,74 54,74 C40,74 30,64 30,50 C30,36 40,26 54,26 Z" />
 
-        <path
-            android:fillColor="#547A95"
-            android:pathData="M11,13v-2c-1.7,0 -3,1.3 -3,3s1.3,3 3,3s3,-1.3 3,-3h-2C11.4,14 11,13.6 11,13z" />
+    <!-- Top Petal - Vibrant Rose Pink -->
+    <path
+        android:fillColor="#FF2A7A"
+        android:pathData="M54,20 C64,20 74,28 72,44 C70,58 54,64 54,64 C54,64 38,58 36,44 C34,28 44,20 54,20 Z" />
 
-        <path
-            android:fillColor="#2C3947"
-            android:pathData="M27,3H5C3.3,3 2,4.3 2,6v15c0,1.7 1.3,3 3,3h6.9h8.1H27c1.7,0 3,-1.3 3,-3V6C30,4.3 28.7,3 27,3zM16,14c0,2.8 -2.2,5 -5,5s-5,-2.2 -5,-5s2.2,-5 5,-5c0,-0.6 0.4,-1 1,-1c2.8,0 5,2.2 5,5C17,13.6 16.6,14 16,14zM25,16h-2c-0.6,0 -1,-0.4 -1,-1s0.4,-1 1,-1h2c0.6,0 1,0.4 1,1S25.6,16 25,16zM25,13h-5c-0.6,0 -1,-0.4 -1,-1s0.4,-1 1,-1h5c0.6,0 1,0.4 1,1S25.6,13 25,13z" />
-    </group>
+    <!-- Right Petal - Warm Sunrise Amber/Coral -->
+    <path
+        android:fillColor="#FF7A38"
+        android:pathData="M88,54 C88,64 80,74 64,72 C50,70 44,54 44,54 C44,54 50,38 64,36 C80,34 88,44 88,54 Z" />
+
+    <!-- Bottom Petal - Electric Cyan / Mint -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M54,88 C44,88 34,80 36,64 C38,50 54,44 54,44 C54,44 70,50 72,64 C74,80 64,88 54,88 Z" />
+
+    <!-- Left Petal - Deep Purple / Violet -->
+    <path
+        android:fillColor="#9D38FF"
+        android:pathData="M20,54 C20,44 28,34 44,36 C58,38 64,54 64,54 C64,54 58,70 44,72 C28,74 20,64 20,54 Z" />
+
+    <!-- Central Overlapping Highlight Overlay -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M54,30 C64,30 70,38 68,48 C66,56 54,60 54,60 C54,60 42,56 40,48 C38,38 44,30 54,30 Z" />
+
+    <!-- Core Lens Ring -->
+    <path
+        android:fillColor="#1A0D1E"
+        android:pathData="M54,39 C62.28,39 69,45.72 69,54 C69,62.28 62.28,69 54,69 C45.72,69 39,62.28 39,54 C39,45.72 45.72,39 54,39 Z" />
+
+    <!-- Inner Luminous Ring -->
+    <path
+        android:fillColor="#FFD7EE"
+        android:pathData="M54,44 C59.52,44 64,48.48 64,54 C64,59.52 59.52,64 54,64 C48.48,64 44,59.52 44,54 C44,48.48 48.48,44 54,44 Z" />
+
+    <!-- Center Core Dot -->
+    <path
+        android:fillColor="#1A0D1E"
+        android:pathData="M54,49 C56.76,49 59,51.24 59,54 C59,56.76 56.76,59 54,59 C51.24,59 49,56.76 49,54 C49,51.24 51.24,49 54,49 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,51.5 C55.38,51.5 56.5,52.62 56.5,54 C56.5,55.38 55.38,56.5 54,56.5 C52.62,56.5 51.5,55.38 51.5,54 C51.5,52.62 52.62,51.5 54,51.5 Z" />
 
 </vector>
