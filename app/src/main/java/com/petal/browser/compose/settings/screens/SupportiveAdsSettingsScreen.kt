@@ -19,6 +19,9 @@ import com.petal.browser.ads.PetalSupportiveAdsManager
 import com.petal.browser.ads.PetalSupportiveAdBanner
 import com.petal.browser.ui.components.ExpressiveHeader
 import com.petal.browser.ui.components.M3ExpressiveVariableBackground
+import com.petal.browser.ui.containment.PetalGroupControlRow
+import com.petal.browser.ui.containment.PetalGroupPosition
+import com.petal.browser.ui.containment.PetalSettingsSection
 
 @Composable
 fun SupportiveAdsSettingsScreen(
@@ -62,17 +65,20 @@ fun SupportiveAdsSettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Main toggle card
-                SettingsCategoryCard(
+                PetalSettingsSection(
                     title = "Monetization & Support",
                     icon = Icons.Rounded.VolunteerActivism,
                     cardId = "ads_supportive",
                     targetHighlightId = targetHighlightItemId
                 ) {
-                    ToggleRow(
+                    PetalGroupControlRow(
                         title = "Enable Supportive Ads",
                         subtitle = "Displays an unobtrusive banner on the home screen to support development",
-                        icon = Icons.Rounded.VolunteerActivism,
+                        leadingIcon = {
+                            Icon(Icons.Rounded.VolunteerActivism, contentDescription = null)
+                        },
                         checked = isSupportiveAdsEnabled,
+                        position = PetalGroupPosition.SINGLE,
                         onCheckedChange = { enabled ->
                             isSupportiveAdsEnabled = enabled
                             PetalSupportiveAdsManager.setSupportiveAdsEnabled(context, enabled)
@@ -84,7 +90,7 @@ fun SupportiveAdsSettingsScreen(
                 }
 
                 // Info card
-                SettingsCategoryCard(
+                PetalSettingsSection(
                     title = "Privacy & User Respect",
                     icon = Icons.Rounded.Favorite,
                     cardId = "ads_privacy",
@@ -94,20 +100,21 @@ fun SupportiveAdsSettingsScreen(
                         text = "Petal Browser remains 100% ad-block enabled for all web browsing. Supportive ads are entirely optional, non-intrusive banner ads that only appear on your home screen when explicitly enabled. We do not track personal data across websites.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
                     )
                 }
 
                 // Live Preview when enabled
                 AnimatedVisibility(visible = isSupportiveAdsEnabled) {
-                    SettingsCategoryCard(
+                    PetalSettingsSection(
                         title = "Live Banner Preview",
                         icon = Icons.Rounded.Paid
                     ) {
                         Text(
                             text = "Preview of the supportive banner as displayed on the home screen:",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         PetalSupportiveAdBanner()
