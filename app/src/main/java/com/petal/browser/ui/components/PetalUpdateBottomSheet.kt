@@ -1,5 +1,6 @@
 package com.petal.browser.ui.components
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.view.View
@@ -561,7 +562,7 @@ fun PetalUpdateSheetContent(
                                 try {
                                     val act = context as? Activity
                                     if (act != null) {
-                                        com.petal.browser.update.PetalPlayUpdateManager.getInstance(act).openPlayStoreListing(act)
+                                        com.petal.browser.update.PetalPlayUpdateManager.getInstance(act).openPlayStore(act)
                                     } else {
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.releaseUrl))
                                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
