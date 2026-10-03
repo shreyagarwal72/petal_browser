@@ -45,11 +45,10 @@ enum class SettingsCategory(val title: String, val subtitle: String, val iconRes
     ADDRESS_BAR("Address Bar", "Position, size, gestures and toolbar actions", com.petal.browser.R.drawable.ic_search),
     MEDIA("Media", "Video player, media sniffer & background detection", com.petal.browser.R.drawable.video_filled),
     DOWNLOADS("Downloads", "Download engine, external downloaders & storage management", com.petal.browser.R.drawable.icon_download),
-    EXPERIMENTAL("Experimental", "App language, experimental features and advanced settings", com.petal.browser.R.drawable.build_filled),
     TABS("Tabs", "Inactive tabs, tab groups and tab cleanup", com.petal.browser.R.drawable.icon_tab),
     MISCELLANEOUS("Miscellaneous", "Custom tabs, external apps and camera tools", com.petal.browser.R.drawable.app_registration),
     DATA_STORAGE("Data & Backup", "Backup and restore history, bookmarks & settings", com.petal.browser.R.drawable.backup_filled),
-    ADS("Supportive Ads", "Configure AdMob supportive ad banner preferences", com.petal.browser.R.drawable.paid),
+    UPDATER("Updates & Diagnostics", "Release tracker, auto-updates & crash reporting", com.petal.browser.R.drawable.update_rounded),
     ABOUT("About & Developer", "App version, licenses, GitHub & developer", com.petal.browser.R.drawable.info_filled)
 }
 
@@ -279,9 +278,6 @@ private fun RenderCategoryContent(
         SettingsCategory.DOWNLOADS -> {
             DownloadSettingsScreen(onNavigateBack = onNavigateBack, targetHighlightItemId = targetHighlightItemId)
         }
-        SettingsCategory.EXPERIMENTAL -> {
-            ExperimentalSettingsScreen(onNavigateBack = onNavigateBack)
-        }
         SettingsCategory.TABS -> {
             TabsSettingsScreen(
                 onNavigateToInactiveSettings = { /* dedicated page is shown from Tabs */ },
@@ -298,8 +294,8 @@ private fun RenderCategoryContent(
         SettingsCategory.DATA_STORAGE -> {
             DataBackupSettingsScreen(onNavigateBack = onNavigateBack)
         }
-        SettingsCategory.ADS -> {
-            SupportiveAdsSettingsScreen(onNavigateBack = onNavigateBack, targetHighlightItemId = targetHighlightItemId)
+        SettingsCategory.UPDATER -> {
+            UpdaterSettingsScreen(onNavigateBack = onNavigateBack)
         }
         SettingsCategory.ABOUT -> {
             AboutSettingsScreen(onNavigateBack = onNavigateBack)

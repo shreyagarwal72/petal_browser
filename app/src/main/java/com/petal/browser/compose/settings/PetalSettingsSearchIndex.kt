@@ -127,6 +127,13 @@ object PetalSettingsSearchIndex {
             category = SettingsCategory.APPEARANCE,
             keywords = listOf("widget", "search widget", "home screen", "launcher widget", "transparency")
         ),
+        SettingsSearchItem(
+            id = "appearance_language",
+            title = "App Language",
+            subtitle = "Choose display language override for Petal Browser with 30 supported languages",
+            category = SettingsCategory.APPEARANCE,
+            keywords = listOf("language", "locale", "translation", "english", "hinglish", "spanish", "french", "german", "chinese", "hindi", "arabic", "russian", "japanese")
+        ),
 
         // ==================== PRIVACY & SECURITY ====================
         SettingsSearchItem(
@@ -310,28 +317,6 @@ object PetalSettingsSearchIndex {
             keywords = listOf("search engine", "custom search", "searx", "searxng", "startpage", "kagi", "search url", "search template")
         ),
 
-        // ==================== EXPERIMENTAL & ADVANCED ====================
-        SettingsSearchItem(
-            id = "exp_language",
-            title = "App Language",
-            subtitle = "Choose language override for Petal Browser independent of Android system language",
-            category = SettingsCategory.EXPERIMENTAL,
-            keywords = listOf("language", "locale", "translation", "english", "spanish", "french", "german", "chinese", "hindi", "arabic")
-        ),
-        SettingsSearchItem(
-            id = "exp_app_lock",
-            title = "App Lock & Passcode Protection",
-            subtitle = "Secure Petal Browser with a passcode PIN or fingerprint authentication upon opening",
-            category = SettingsCategory.EXPERIMENTAL,
-            keywords = listOf("app lock", "passcode", "pin", "lock", "security lock", "biometric lock", "protect")
-        ),
-        SettingsSearchItem(
-            id = "exp_double_back_exit",
-            title = "Double Tap Back to Exit",
-            subtitle = "Require double pressing back button within 2 seconds to prevent accidental closing",
-            category = SettingsCategory.EXPERIMENTAL,
-            keywords = listOf("double back", "exit", "close app", "accidental exit", "back button")
-        ),
 
         // ==================== MISCELLANEOUS ====================
         SettingsSearchItem(
@@ -400,20 +385,20 @@ object PetalSettingsSearchIndex {
             keywords = listOf("clear data", "clear cache", "delete history", "clear cookies", "wipe data", "storage")
         ),
 
-        // ==================== SUPPORTIVE ADS ====================
+        // ==================== UPDATER & DIAGNOSTICS ====================
         SettingsSearchItem(
-            id = "ads_supportive",
-            title = "Supportive Ads",
-            subtitle = "Enable or disable optional non-intrusive ad banners on the home screen",
-            category = SettingsCategory.ADS,
-            keywords = listOf("ads", "supportive ads", "admob", "banner", "monetization", "support developer", "sponsor")
+            id = "updater_check_now",
+            title = "Check for Updates Now",
+            subtitle = "Query GitHub release API for new Petal Browser versions and changelogs",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("check for updates", "update app", "github release", "latest version", "apk update")
         ),
         SettingsSearchItem(
-            id = "ads_privacy",
-            title = "Supportive Ads Privacy & Respect",
-            subtitle = "Learn how supportive ads maintain privacy without cross-site tracking",
-            category = SettingsCategory.ADS,
-            keywords = listOf("ads privacy", "tracking", "user respect", "ad-free", "ad banner privacy")
+            id = "updater_crash_reporting",
+            title = "Crash Reporting & Diagnostics",
+            subtitle = "View crash logs, diagnostics stack traces, and manage error reporting",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("crash logs", "diagnostics", "stack trace", "error logs", "bug report", "reporting")
         ),
 
         // ==================== ABOUT & DEVELOPER ====================
@@ -478,11 +463,10 @@ object PetalSettingsSearchIndex {
         SettingsCategory.DISPLAY_ZOOM,
         SettingsCategory.ADDRESS_BAR,
         SettingsCategory.MEDIA,
-        SettingsCategory.EXPERIMENTAL,
         SettingsCategory.TABS,
         SettingsCategory.MISCELLANEOUS,
         SettingsCategory.DATA_STORAGE,
-        SettingsCategory.ADS,
+        SettingsCategory.UPDATER,
         SettingsCategory.ABOUT
     )
 
