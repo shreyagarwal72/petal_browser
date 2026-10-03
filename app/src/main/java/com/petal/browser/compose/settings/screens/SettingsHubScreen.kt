@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
@@ -87,6 +88,11 @@ fun SettingsHubScreen(
                 subtitle = "Browser Preferences & Customization",
                 onBack = onNavigateBack,
                 actions = {
+                    HeaderActionIcon(
+                        icon = Icons.Rounded.Favorite,
+                        contentDescription = "Support Petal",
+                        onClick = { onCategoryClick(SettingsCategory.ABOUT, "about_actions") }
+                    )
                     HeaderActionIcon(
                         icon = if (isSearchOpen) Icons.Rounded.Close else Icons.Rounded.Search,
                         contentDescription = if (isSearchOpen) "Close search" else "Search settings",
