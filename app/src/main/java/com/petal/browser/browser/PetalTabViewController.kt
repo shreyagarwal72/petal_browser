@@ -225,6 +225,11 @@ class PetalTabViewController private constructor(
 
     init {
         isNestedScrollingEnabled = true
+        // Petal's own PullToRefreshFrameLayout owns the pull gesture inside BrowserActivity;
+        // disable the Mozilla SwipeRefreshLayout so it never intercepts or draws its spinner.
+        if (isHostedByBrowserActivity()) {
+            isEnabled = false
+        }
         mediaBridge = com.petal.browser.media.PetalMediaBridge(
             context,
             object : com.petal.browser.media.PetalMediaBridge.MediaStateListener {
@@ -359,7 +364,7 @@ class PetalTabViewController private constructor(
                 override fun onHideAction(session: org.mozilla.geckoview.GeckoSession, reason: Int) {}
             }
         }
-        refreshFeature = SwipeRefreshFeature(
+        refreshFeature = if (isHostedByBrowserActivity()) null else SwipeRefreshFeature(
             store = browserStore,
             reloadUrlUseCase = SessionUseCases(browserStore).reload,
             swipeRefreshLayout = this,
@@ -371,6 +376,15 @@ class PetalTabViewController private constructor(
             fullScreenFeature?.start()
         }
         publishState()
+    }
+
+    private fun isHostedByBrowserActivity(): Boolean {
+        var ctx: android.content.Context? = context
+        while (ctx is android.content.ContextWrapper) {
+            if (ctx is com.petal.browser.activity.BrowserActivity) return true
+            ctx = ctx.baseContext
+        }
+        return false
     }
 
     fun loadUrl(url: String) {
@@ -565,7 +579,18 @@ class PetalTabViewController private constructor(
         }, 300L * previewRetryCount)
     }
 
-    fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) {
+    fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) = capturePreview(false, callback)
+
+    /**
+     * Explicit capture right before the tab manager opens (Chromium's CacheTab-before-switch
+     * flow). The user is looking at this exact frame, so a plain dark/white page is a valid
+     * thumbnail; only a fully transparent frame is rejected. Callable from Java.
+     */
+    fun captureForSwitcher(callback: java.util.function.Consumer<Bitmap?>) {
+        capturePreview(true) { callback.accept(it) }
+    }
+
+    private fun capturePreview(forceAccept: Boolean, callback: (Bitmap?) -> Unit) {
         val key = boundTabId ?: run { callback(null); return }
         val revision = previewRevision
         val privateTab = isIncognito()
@@ -593,7 +618,7 @@ class PetalTabViewController private constructor(
                     } catch (_: Throwable) {
                         bitmap
                     }
-                    stored = TabThumbnailCache.put(key, scaled, privateTab, hasContentfulPaint())
+                    stored = TabThumbnailCache.put(key, scaled, privateTab, forceAccept || hasContentfulPaint())
                     if (stored) { capturedPreviewRevision = revision; storedBitmap = scaled } else schedulePreviewRetry()
                 }
                 callback(if (current && stored) storedBitmap else null)
