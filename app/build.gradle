@@ -219,8 +219,10 @@ dependencies {
     // see https://github.com/android/identity-samples/issues/90) that some devices hit
     // even with fully correct OAuth configuration.
 
-    // Google Mobile Ads (GMS Ads)
+    // Google Mobile Ads (GMS Ads) & Google Play In-App Updates
     implementation 'com.google.android.gms:play-services-ads:24.0.0'
+    implementation 'com.google.android.play:app-update:2.1.0'
+    implementation 'com.google.android.play:app-update-ktx:2.1.0'
 
     // AndroidX Biometric for hardware biometric & device credential lock
     implementation 'androidx.biometric:biometric:1.2.0-alpha05'
