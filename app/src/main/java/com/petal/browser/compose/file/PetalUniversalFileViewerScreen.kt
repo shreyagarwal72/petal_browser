@@ -902,8 +902,6 @@ private fun ArchiveViewerContent(
         }
     }
 
-    val isApk = remember(extension) { extension.equals("apk", ignoreCase = true) }
-
     when {
         isLoading -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -916,58 +914,6 @@ private fun ArchiveViewerContent(
         entries != null -> {
             val list = entries ?: emptyList()
             Column(modifier = Modifier.fillMaxSize()) {
-                if (isApk) {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Android,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.ui_android_package_apk),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = stringResource(R.string.ui_install_this_application_directly),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    PetalHapticEngine.getInstance(context).playClick(context)
-                                    installApkPackage(context, fileUri, displayName)
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            ) {
-                                Icon(Icons.Rounded.InstallMobile, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.ui_install_2))
-                            }
-                        }
-                    }
-                }
-
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -1003,44 +949,6 @@ private fun ArchiveViewerContent(
                 }
             }
         }
-    }
-}
-
-private fun installApkPackage(context: Context, fileUri: Uri, displayName: String) {
-    try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            if (!context.packageManager.canRequestPackageInstalls()) {
-                val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(settingsIntent)
-                PetalToast.show(context, "Please enable permission to install packages", Toast.LENGTH_LONG)
-                return
-            }
-        }
-
-        val apkUriToInstall: Uri = if (fileUri.scheme == "file") {
-            val f = File(fileUri.path ?: "")
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", f)
-        } else {
-            // Copy to cache dir to ensure package manager has direct file read permission
-            val tempApk = File(context.cacheDir, displayName.ifEmpty { "install.apk" })
-            context.contentResolver.openInputStream(fileUri)?.use { input ->
-                FileOutputStream(tempApk).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempApk)
-        }
-
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUriToInstall, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(installIntent)
-    } catch (e: Exception) {
-        PetalToast.show(context, "Failed to launch installer: ${e.message}", Toast.LENGTH_LONG)
     }
 }
 

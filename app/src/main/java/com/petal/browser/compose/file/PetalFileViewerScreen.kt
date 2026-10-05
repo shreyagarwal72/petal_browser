@@ -1283,44 +1283,6 @@ private fun formatArchiveSize(bytes: Long): String {
     return if (unit == 0) "${bytes} B" else String.format(Locale.US, "%.1f %s", value, units[unit])
 }
 
-private fun installApkPackage(context: Context, fileUri: Uri, displayName: String) {
-    try {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            if (!context.packageManager.canRequestPackageInstalls()) {
-                val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(settingsIntent)
-                PetalToast.show(context, "Please enable permission to install packages", PetalToast.LENGTH_LONG)
-                return
-            }
-        }
-
-        val apkUriToInstall: Uri = if (fileUri.scheme == "file") {
-            val f = File(fileUri.path ?: "")
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", f)
-        } else {
-            // Copy to cache dir to ensure package manager has direct file read permission
-            val tempApk = File(context.cacheDir, displayName.ifEmpty { "install.apk" })
-            context.contentResolver.openInputStream(fileUri)?.use { input ->
-                FileOutputStream(tempApk).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempApk)
-        }
-
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUriToInstall, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(installIntent)
-    } catch (e: Exception) {
-        PetalToast.show(context, "Failed to launch installer: ${e.message}", PetalToast.LENGTH_LONG)
-    }
-}
-
 @Composable
 private fun GenericBinaryContent(fileUri: Uri, displayName: String, extension: String) {
     val context = LocalContext.current
