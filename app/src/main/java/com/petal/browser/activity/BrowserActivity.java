@@ -984,9 +984,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
         // actually loading the URL — causing the "only opens on 2nd launch" bug.
 
-        if (sp.getBoolean("sp_check_update_on_launch", true)) {
-            com.petal.browser.unit.UpdateUnit.checkForUpdates(this, true);
-        }
+        // Update check disabled (UpdateUnit removed)
 
         // Tab Session Restoration & Rehydration
         boolean tabsRestored = com.petal.browser.unit.PetalTabSessionManager.restoreSession(this);
