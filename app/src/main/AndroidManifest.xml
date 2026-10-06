@@ -57,10 +57,12 @@
          Policy without requiring Play Console permission declaration forms -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:node="remove" />
+        tools:node="remove"
+        tools:remove="android:name" />
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
-        tools:node="remove" />
+        tools:node="remove"
+        tools:remove="android:name" />
 
     <!-- Queries for Google Lens, Google App and external browser intent integration -->
     <queries>
