@@ -205,6 +205,11 @@ jobs:
               cp "$f" dist/petal-browser-release.aab
             fi
           done
+
+          if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            echo "Copying R8/Proguard mapping.txt deobfuscation file to dist/..."
+            cp app/build/outputs/mapping/release/mapping.txt dist/mapping.txt
+          fi
           ls -la dist/
 
       - name: Extract App Version and Changelog
