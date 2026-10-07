@@ -14,7 +14,10 @@
   - **Google Play In-App Updates**: Powered by official `com.google.android.play:app-update-ktx` (`PetalPlayUpdateManager.kt`, `PetalPlayUpdatePopup.kt`).
   - **Monetization & Supportive Ads**: Features optional supportive ad banners on the home screen (`SupportiveAdsSettingsScreen.kt`, `PetalSupportiveAdsManager.kt`, `com.google.android.gms:play-services-ads`).
   - **Publishing & Assets**: Tracks Fastlane metadata (`fastlane/`), Google Play graphic assets (`graphics/`, `wiki/`), draft backups (`drafts/`), variable fonts (`inter_variable.ttf`, `lexend_variable.ttf`, etc.), and bundle signing utilities (`.github/scripts/strip_aab_signatures.py`).
-  - **Permissions**: Omits `REQUEST_INSTALL_PACKAGES` to maintain Play Store compliance.
+  - **Permissions & Play Policy**:
+    - Omits `REQUEST_INSTALL_PACKAGES` to maintain Play Store compliance.
+    - **Photo and Video Permissions Policy**: Strictly omits broad `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, and `READ_MEDIA_VISUAL_USER_SELECTED` permissions. Uses Android system photo picker (`ActivityResultContracts.PickVisualMedia` / `PickMultipleVisualMedia`) or system Storage Access Framework pickers instead. Never add broad photo/video storage permissions.
+    - Legacy storage permissions (`READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`) must use `android:maxSdkVersion="32"`.
 
 ## 2. Feature & Fix Synchronization Protocol
 

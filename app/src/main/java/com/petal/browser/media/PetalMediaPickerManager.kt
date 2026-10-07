@@ -32,70 +32,25 @@ object PetalMediaPickerManager {
 
     /**
      * Returns required runtime permissions based on Android SDK level and requested filter.
+     * On Android 13+ (API 33+), system Photo Picker is used and requires 0 permissions.
      */
     fun getRequiredMediaPermissions(filterType: MediaFilterType = MediaFilterType.ALL): Array<String> {
-        return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                when (filterType) {
-                    MediaFilterType.PHOTOS -> arrayOf(
-                        Manifest.permission.READ_MEDIA_IMAGES,
-                        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-                    )
-                    MediaFilterType.VIDEOS -> arrayOf(
-                        Manifest.permission.READ_MEDIA_VIDEO,
-                        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-                    )
-                    MediaFilterType.ALL -> arrayOf(
-                        Manifest.permission.READ_MEDIA_IMAGES,
-                        Manifest.permission.READ_MEDIA_VIDEO,
-                        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-                    )
-                }
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                when (filterType) {
-                    MediaFilterType.PHOTOS -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
-                    MediaFilterType.VIDEOS -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
-                    MediaFilterType.ALL -> arrayOf(
-                        Manifest.permission.READ_MEDIA_IMAGES,
-                        Manifest.permission.READ_MEDIA_VIDEO
-                    )
-                }
-            }
-            else -> arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            emptyArray()
+        } else {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
     }
 
     /**
      * Checks if media read permissions are granted for the specified filter type.
+     * Always true on Android 13+ where Photo Picker / Storage Access Framework is used without broad permissions.
      */
     fun hasMediaPermissions(context: Context, filterType: MediaFilterType = MediaFilterType.ALL): Boolean {
-        return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                val fullImages = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-                val fullVideos = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
-                val partial = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
-                if (partial) return true
-                when (filterType) {
-                    MediaFilterType.PHOTOS -> fullImages
-                    MediaFilterType.VIDEOS -> fullVideos
-                    MediaFilterType.ALL -> fullImages || fullVideos
-                }
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                val images = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-                val videos = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
-                when (filterType) {
-                    MediaFilterType.PHOTOS -> images
-                    MediaFilterType.VIDEOS -> videos
-                    MediaFilterType.ALL -> images || videos
-                }
-            }
-            else -> {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            }
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            true
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         }
     }
 

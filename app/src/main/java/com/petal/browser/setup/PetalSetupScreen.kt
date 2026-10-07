@@ -122,15 +122,13 @@ private fun PetalSetupContent(
     }
 
     val permissions = remember {
-        val media = if (Build.VERSION.SDK_INT >= 33) listOf(
-            Manifest.permission.READ_MEDIA_IMAGES,
-            Manifest.permission.READ_MEDIA_VIDEO,
-            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-        ) else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        val media = if (Build.VERSION.SDK_INT >= 33) emptyList() else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         buildList {
             if (Build.VERSION.SDK_INT >= 33) add(SetupPermission("notifications", R.string.petal_setup_notifications, R.string.petal_setup_notifications_reason, listOf(Manifest.permission.POST_NOTIFICATIONS)))
             add(SetupPermission("camera", R.string.petal_setup_camera, R.string.petal_setup_camera_reason, listOf(Manifest.permission.CAMERA)))
-            add(SetupPermission("media", R.string.petal_setup_media, R.string.petal_setup_media_reason, media))
+            if (media.isNotEmpty()) {
+                add(SetupPermission("media", R.string.petal_setup_media, R.string.petal_setup_media_reason, media))
+            }
             add(SetupPermission("microphone", R.string.petal_setup_microphone, R.string.petal_setup_microphone_reason, listOf(Manifest.permission.RECORD_AUDIO)))
             add(SetupPermission("location", R.string.petal_setup_location, R.string.petal_setup_location_reason, listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), true))
         }

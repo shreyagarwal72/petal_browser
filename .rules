@@ -5,6 +5,7 @@
 - **No Local Gradle Builds**: Do NOT attempt `./gradlew assembleRelease` or heavy multi-variant local builds on-device. Builds and APK artifacts are produced remotely via **GitHub Actions CI**.
 - **Push Workflow**: Every completed feature, bug fix, or code refinement must be cleanly committed and pushed directly to GitHub (`origin main` or active branch).
 - **Zero Secrets / Key Material**: Release keystores, passwords (`RELEASE_STORE_PASSWORD`, `RELEASE_KEY_PASSWORD`), API credentials, or signing secrets must **NEVER** be committed or written into tracked files.
+- **Google Play Storage & Photo Picker Policy**: In accordance with Google Play's Photo and Video Permissions policy for apps targeting Android 13+ (API 33+), broad media permissions (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_VISUAL_USER_SELECTED`) must never be requested or included in the manifest. Always use the Android system Photo Picker (`ActivityResultContracts.PickVisualMedia` / `PickMultipleVisualMedia`) or system document picker (`GetContent` / `OpenDocument`). Legacy storage permissions must carry `android:maxSdkVersion="32"`.
 
 ## 2. Codebase Architecture & Hybrid Bridge Conventions
 - **Language Hybridization**: The core activity and lifecycle shell is predominantly Java (`BrowserActivity.java`), while modern UI surfaces, settings, menus, and custom components are written in Kotlin with Jetpack Compose.
