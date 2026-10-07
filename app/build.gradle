@@ -230,9 +230,6 @@ dependencies {
 
     // Google ML Kit On-Device Recognition APIs
 
-    // Hidden API bypass for non-SDK interface access (e.g. GeckoThread on Android 15/16)
-    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
-
     // yt-dlp (via youtubedl-android) — powers Petal Social Downloader for YouTube,
     // Instagram, TikTok, Twitter/X, Facebook, Reddit, and 1800+ more platforms.
     implementation 'io.github.junkfood02.youtubedl-android:library:0.18.1'
