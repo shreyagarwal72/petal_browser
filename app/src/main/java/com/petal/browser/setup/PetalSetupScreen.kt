@@ -122,13 +122,15 @@ private fun PetalSetupContent(
     }
 
     val permissions = remember {
-        val media = if (Build.VERSION.SDK_INT >= 33) emptyList() else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        val media = if (Build.VERSION.SDK_INT >= 33) listOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+        ) else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         buildList {
             if (Build.VERSION.SDK_INT >= 33) add(SetupPermission("notifications", R.string.petal_setup_notifications, R.string.petal_setup_notifications_reason, listOf(Manifest.permission.POST_NOTIFICATIONS)))
             add(SetupPermission("camera", R.string.petal_setup_camera, R.string.petal_setup_camera_reason, listOf(Manifest.permission.CAMERA)))
-            if (media.isNotEmpty()) {
-                add(SetupPermission("media", R.string.petal_setup_media, R.string.petal_setup_media_reason, media))
-            }
+            add(SetupPermission("media", R.string.petal_setup_media, R.string.petal_setup_media_reason, media))
             add(SetupPermission("microphone", R.string.petal_setup_microphone, R.string.petal_setup_microphone_reason, listOf(Manifest.permission.RECORD_AUDIO)))
             add(SetupPermission("location", R.string.petal_setup_location, R.string.petal_setup_location_reason, listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), true))
         }
@@ -196,7 +198,7 @@ private fun PetalSetupContent(
                             stageTitles[stage.coerceIn(0, 3)],
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -677,15 +679,15 @@ private fun AccessStage(
 ) {
     val context = LocalContext.current
 
-    PetalSettingsSection(
-        title = stringResource(R.string.petal_setup_access_title),
-        icon = Icons.Rounded.Security,
-        cardId = "setup_permissions"
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
             stringResource(R.string.petal_setup_access_body),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
         )
 
         PetalGroup(rowCount = items.size) { index, position ->
@@ -732,14 +734,29 @@ private fun AccessStage(
                         tint = if (granted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Column(Modifier.weight(1f)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(item.title), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(item.title),
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             if (item.optional) {
-                                Text(
-                                    stringResource(R.string.petal_setup_optional),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.petal_setup_optional),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
                             }
                         }
                         Text(
@@ -773,9 +790,9 @@ private fun AccessStage(
                         Button(
                             onClick = { request(item) },
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                         ) {
-                            Text(stringResource(R.string.ui_grant_permission), style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.ui_grant), style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
