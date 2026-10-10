@@ -117,7 +117,11 @@ object PetalBrowserPermissionDialog {
         val mic = granted(Manifest.permission.RECORD_AUDIO)
         val location = granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)
         val notifications = Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS)
-        val media = Build.VERSION.SDK_INT >= 33 || granted(Manifest.permission.READ_EXTERNAL_STORAGE)
+        val media = if (Build.VERSION.SDK_INT >= 33) {
+            granted(Manifest.permission.READ_MEDIA_IMAGES) || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+        } else {
+            granted(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
         val defaultBrowser = isDefaultBrowser(context)
 
         return !camera || !mic || !location || !notifications || !media || !defaultBrowser
@@ -214,7 +218,11 @@ private fun BrowserPermissionSheet(onDone: () -> Unit) {
         granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
     val notifications = Build.VERSION.SDK_INT < 33 || permissionRefresh.let { granted(Manifest.permission.POST_NOTIFICATIONS) }
-    val media = Build.VERSION.SDK_INT >= 33 || permissionRefresh.let { granted(Manifest.permission.READ_EXTERNAL_STORAGE) }
+    val media = if (Build.VERSION.SDK_INT >= 33) {
+        permissionRefresh.let { granted(Manifest.permission.READ_MEDIA_IMAGES) || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) }
+    } else {
+        permissionRefresh.let { granted(Manifest.permission.READ_EXTERNAL_STORAGE) }
+    }
 
     val missing = !isDefault || !camera || !microphone || !location || !notifications || !media
     val allGranted = !missing
@@ -282,6 +290,16 @@ private fun BrowserPermissionSheet(onDone: () -> Unit) {
                     isGranted = notifications,
                     actionText = "Grant",
                     onGrant = { activity?.let { request.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS)) } }
+                )
+            )
+            items.add(
+                PermissionEntry(
+                    title = "Photos and videos",
+                    description = "Media picker, file uploads, and attachment selection",
+                    icon = Icons.Outlined.PhotoLibrary,
+                    isGranted = media,
+                    actionText = "Grant",
+                    onGrant = { activity?.let { request.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)) } }
                 )
             )
         } else {
