@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
@@ -88,11 +87,6 @@ fun SettingsHubScreen(
                 subtitle = "Browser Preferences & Customization",
                 onBack = onNavigateBack,
                 actions = {
-                    HeaderActionIcon(
-                        icon = Icons.Rounded.Favorite,
-                        contentDescription = "Support Petal",
-                        onClick = { onCategoryClick(SettingsCategory.ABOUT, "about_actions") }
-                    )
                     HeaderActionIcon(
                         icon = if (isSearchOpen) Icons.Rounded.Close else Icons.Rounded.Search,
                         contentDescription = if (isSearchOpen) "Close search" else "Search settings",
@@ -183,10 +177,13 @@ fun SettingsHubScreen(
                 }
             }
 
+            val hubListState = androidx.compose.foundation.lazy.rememberLazyListState()
             LazyColumn(
+                state = hubListState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .com.petal.browser.ui.modifiers.scrollMotionBlur(hubListState),
                 contentPadding = PaddingValues(
                     top = 12.dp,
                     bottom = 24.dp,
