@@ -114,6 +114,13 @@ object PetalSettingsSearchIndex {
             keywords = listOf("floating tab bar", "bottom bar", "tabs", "island bar", "tab bar", "navigation")
         ),
         SettingsSearchItem(
+            id = "appearance_expressive_shapes",
+            title = "Material 3 Expressive Shapes (35 Shapes)",
+            subtitle = "Enable or disable all 35 authentic Material 3 Expressive shapes across homescreen, quick tools, badges, and settings",
+            category = SettingsCategory.APPEARANCE,
+            keywords = listOf("expressive shapes", "material 3 shapes", "35 shapes", "polygons", "geometry", "icons", "shortcuts", "badges")
+        ),
+        SettingsSearchItem(
             id = "appearance_refresh_rate",
             title = "High Refresh Rate (90Hz / 120Hz / 144Hz)",
             subtitle = "Force peak display refresh rate for buttery-smooth scrolling and animations",
@@ -385,20 +392,20 @@ object PetalSettingsSearchIndex {
             keywords = listOf("clear data", "clear cache", "delete history", "clear cookies", "wipe data", "storage")
         ),
 
-        // ==================== SUPPORTIVE ADS ====================
+        // ==================== UPDATER & DIAGNOSTICS ====================
         SettingsSearchItem(
-            id = "ads_supportive",
-            title = "Supportive Ads",
-            subtitle = "Enable or disable optional non-intrusive ad banners on the home screen",
-            category = SettingsCategory.ADS,
-            keywords = listOf("ads", "supportive ads", "admob", "banner", "monetization", "support developer", "sponsor")
+            id = "updater_check_now",
+            title = "Check for Updates Now",
+            subtitle = "Query GitHub release API for new Petal Browser versions and changelogs",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("check for updates", "update app", "github release", "latest version", "apk update")
         ),
         SettingsSearchItem(
-            id = "ads_privacy",
-            title = "Supportive Ads Privacy & Respect",
-            subtitle = "Learn how supportive ads maintain privacy without cross-site tracking",
-            category = SettingsCategory.ADS,
-            keywords = listOf("ads privacy", "tracking", "user respect", "ad-free", "ad banner privacy")
+            id = "updater_crash_reporting",
+            title = "Crash Reporting & Diagnostics",
+            subtitle = "View crash logs, diagnostics stack traces, and manage error reporting",
+            category = SettingsCategory.UPDATER,
+            keywords = listOf("crash logs", "diagnostics", "stack trace", "error logs", "bug report", "reporting")
         ),
 
         // ==================== ABOUT & DEVELOPER ====================
@@ -466,7 +473,7 @@ object PetalSettingsSearchIndex {
         SettingsCategory.TABS,
         SettingsCategory.MISCELLANEOUS,
         SettingsCategory.DATA_STORAGE,
-        SettingsCategory.ADS,
+        SettingsCategory.UPDATER,
         SettingsCategory.ABOUT
     )
 
